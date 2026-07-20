@@ -1,0 +1,16 @@
+[project]
+name = "others-tests"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "impedance>=1.7.1",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.1",
+    "pandas>=3.0.3",
+    "wepy",
+]
+
+[tool.uv.sources]
+wepy = { path = "../wepy", editable = true }
