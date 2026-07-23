@@ -11,6 +11,8 @@ import re
 
     # %%
 files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\439_III_III_IrOxonPTL_150nm_Pt_500ug_Pressures_N115_etchedcathode_BDC929\PEISes',['CV','sccm_automated'],natural_sort=True)
+files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode\Different H2 flows II',['CV','sccm_automated'],natural_sort=True)
+
 print(files)
 labels = [re.search(r'flow_(\d+)_sccm', file).group(1) for file in files]
 
@@ -26,7 +28,7 @@ for file,color in zip(files,colors):
 
     data = we.read_file(file)
     data_cycle = data[data['cycle number'] == 3]
-    plt.plot(data_cycle['Ewe/V'],data_cycle['<I>/mA'],c=color,label = sccm_value)
+    plt.plot(data_cycle['control/V'],data_cycle['<I>/mA'],c=color,label = sccm_value)
 plt.legend()
 plt.show()
 # %%
@@ -35,8 +37,8 @@ plt.show()
 for file,color,label in zip(files,colors,labels):
     data = we.read_file(file)
     data_cycle = data[data['cycle number'] == 3]
-    dara_rising = data_cycle[data_cycle['Ewe/V'].diff() > 0]
-    plt.plot(dara_rising['Ewe/V'],dara_rising['<I>/mA'],c=color,label = label  )
+    dara_rising = data_cycle[data_cycle['control/V'].diff() > 0]
+    plt.plot(dara_rising['control/V'],dara_rising['<I>/mA'],c=color,label = label  )
 plt.ylim(-15,60)
 plt.legend()
 plt.show()
@@ -44,8 +46,8 @@ plt.show()
 for file,color,label in zip(files,colors,labels):
     data = we.read_file(file)
     data_cycle = data[data['cycle number'] == 3]
-    dara_rising = data_cycle[data_cycle['Ewe/V'].diff() < 0]
-    plt.plot(dara_rising['Ewe/V'],dara_rising['<I>/mA'],c=color,label = label  )
+    dara_rising = data_cycle[data_cycle['control/V'].diff() < 0]
+    plt.plot(dara_rising['control/V'],dara_rising['<I>/mA'],c=color,label = label  )
 plt.ylim(-15,60)
 plt.legend()
 plt.show()

@@ -1,4 +1,6 @@
 # %%
+import warnings
+
 import wepy.basics as we
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,9 +12,10 @@ if ip is not None:
 import re
 import wepy.eis as weis
 import pandas as pd
+warnings.filterwarnings('ignore')  # Suppress all warnings
 
     # %%
-files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode/Different N2 flows',['_PEIS','sccm_automated'],omit_string = ['_100_sccm','_7_sccm','1.5_sccm'],natural_sort=True)
+files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode/Different H2 flows II',['_PEIS','sccm_automated'],omit_string = ['_300_sccm',],natural_sort=True)
 print(files)
 
 flows = [re.search(r'flow_(\d+)_sccm', file).group(1) for file in files]
@@ -27,10 +30,11 @@ for file,color,label in zip(files,colors,flows):
 
     data = we.read_file(file)
     data = data[data['freq/Hz'] > 0]
-    
+    # print(data.columns)
     # Group data by 'cycle number' and average <Ewe>/V and <I>/mA for each cycle
-    averaged = data.groupby('cycle number')[['Ewe-Ece/V', '<I>/mA']].mean().reset_index()
-    plt.plot(averaged['Ewe-Ece/V'], averaged['<I>/mA'], '-', c=color, label=label)
+    averaged = data.groupby('cycle number')[['Unnamed: 87', '<I>/mA']].mean().reset_index()
+    # print(averaged)
+    plt.plot(averaged['Unnamed: 87'], averaged['<I>/mA'], '-', c=color, label=label)
 plt.legend()
 plt.show()
 # %%
@@ -45,9 +49,12 @@ for file,label in zip(files,flows):
     groups = data.groupby('cycle number')
     Z_colors = we.get_colors(len(groups))
     for (cycle,group),color in zip(groups, Z_colors):
-        plt.plot(group['Re(Z)/Ohm'],group['-Im(Z)/Ohm'], '-', c=color)
+        plt.plot(group['Re(Zwe-ce)/Ohm'],group['-Im(Zwe-ce)/Ohm'], '-', c=color)
    # plt.legend()
-    plt.show()
+    plt.xlim(0.02,0.05)
+    plt.ylim(-0.01,0.02)
+    plt.gca().set_aspect('equal')
+plt.show()
 # %%
 #files = list(reversed(files))
 #flows = list(reversed(flows))
@@ -58,7 +65,7 @@ params_all = []
 for cycle in cycles:
     print(f"Cycle {cycle}")
     
-    params = [0,0, 0.01,1e-8,  0.01, 0.01,  0.9, 0.3, 0.1,  0.9]
+    params = [0,0, 0.01,1e-8,  0.01, 0.01,  0.9, 0.5, 0.1,  0.9]
     bounds = (  [0,   1e-10, 0,   1e-5, 0.7, 0,   1e-2, 0.8],
                 [0.05,1e-5,  2,   10,    1,  2,   10,   1])
 
@@ -74,13 +81,14 @@ for cycle in cycles:
 
 
 
-        f,Z,E,I = weis.freq_and_Z(group,cycle,[2,10000],control = 'Ewe-ce')
+
+        f,Z,E,I = weis.freq_and_Z(group,cycle,[1,15000],control = 'Ewe-ce')
     #    print(E,I)
         init = params[2:]
 
         cir = "R0-L0-p(R1,CPE1)-p(R2,CPE2)"
-
-        params,errors = weis.fit_spectrum(f, Z, cir="R0-L0-p(R1,CPE1)-p(R2,CPE2)", init=init, bounds=bounds, E=np.round(E,3), I=I, tau_sort=True)
+        f,Z = weis.remove_outliers(f,Z,threshold=0.1)
+        params,errors = weis.fit_spectrum(f, Z, cir="R0-L0-p(R1,CPE1)-p(R2,CPE2)", init=init, bounds=bounds, outliers=False, threshold=0.5, E=np.round(E,3), I=I, tau_sort=True)
         # print(params)
         f_model, Z_model = weis.show_fit(f,cir,params[2:],decades = (0,1), points = 100)
         plt.plot(Z.real, -Z.imag, 'x', c=color)
@@ -105,16 +113,25 @@ plt.show()
 print(params_all)
 print(params_all.columns)
 # %%
-
-params_flow = params_all.groupby('flow')
+params_all_hc = params_all[(params_all['I'] > 15) & (params_all['I'] < 500)]
+params_flow = params_all_hc.groupby('flow')
 colors = we.get_colors(len(params_flow))
+intersections = []
 for (flow,group),c in zip(params_flow,colors):
 #    plt.plot(group['I'],group['R1'],'-',c=c,label = flow)
     plt.plot(group['I'],1/group['R1'],'-',c=c,label = flow)
+    k,q = np.polyfit(group['I'],1/group['R1'],1)
+    intersections.append((flow,q))
+    plt.plot(group['I'],k*group['I']+q,'--',c=c)
+plt.xlabel('Current (mA)')
+
 plt.legend()
 # plt.xscale('log')
 # plt.yscale('log')
 # plt.ylim(1e-2,5)
-plt.xlim(1e1,1000)
+# plt.xlim(1e1,1000)
 plt.show()
 # %%
+plt.plot([int(flow) for flow,q in intersections],[q for flow,q in intersections],'-o')
+plt.xlabel('Flow (sccm)')
+plt.ylabel('1/R1 at I=0 (S)')
