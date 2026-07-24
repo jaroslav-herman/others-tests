@@ -15,12 +15,17 @@ import pandas as pd
 warnings.filterwarnings('ignore')  # Suppress all warnings
 
     # %%
-files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode/Different H2 flows II',['_PEIS','sccm_automated'],omit_string = ['_300_sccm',],natural_sort=True)
-print(files)
-
-flows = [re.search(r'flow_(\d+)_sccm', file).group(1) for file in files]
+files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode/Different H2 flows II',['_PEIS','sccm_automated'],omit_string = ['_301_sccm',],natural_sort=True)
+files = we.load_files(r'\\ELECTROLYZER\PEM-WE_measurements\2026\430_VIII_VIII_IrOx(6,15)_60min50WTiCoverlayer,refel_N115_etchedcathode/Different N2 flows III',['_PEIS','sccm_automated'],omit_string = ['_301_sccm',],natural_sort=True)
+flows = []
+for file in files:
+    match = re.search(r'(\d+)_sccm', file, re.IGNORECASE)
+    if match:
+        flows.append(match.group(1))
+    else:
+        flows.append('unknown')
 colors = we.get_colors(len(files))
-
+print(flows)
 # %%
 
 
@@ -66,7 +71,7 @@ for cycle in cycles:
     print(f"Cycle {cycle}")
     
     params = [0,0, 0.01,1e-8,  0.01, 0.01,  0.9, 0.5, 0.1,  0.9]
-    bounds = (  [0,   1e-10, 0,   1e-5, 0.7, 0,   1e-2, 0.8],
+    bounds = (  [0,   1e-10, 0,   1e-5, 0.7, 0,   1e-5, 0.7],
                 [0.05,1e-5,  2,   10,    1,  2,   10,   1])
 
     for file,color,flow in zip(files,colors,flows):
@@ -93,6 +98,7 @@ for cycle in cycles:
         f_model, Z_model = weis.show_fit(f,cir,params[2:],decades = (0,1), points = 100)
         plt.plot(Z.real, -Z.imag, 'x', c=color)
         plt.plot(Z_model.real, -Z_model.imag, '-', c=color)
+
         
         params_all.append(np.concatenate(([int(flow)],params)))
     # plt.legend()
@@ -101,6 +107,9 @@ for cycle in cycles:
 
 columns = ['flow', 'E', 'I', 'R0', 'L0', 'R1', 'Q1', 'a1', 'R2', 'Q2', 'a2']
 params_all = pd.DataFrame(params_all, columns=columns)
+params_all['C1'] = weis.capacitance(params_all['R1'], params_all['Q1'], params_all['a1'])
+params_all['C2'] = weis.capacitance(params_all['R2'], params_all['Q2'], params_all['a2'])
+
 # %%
 
 
@@ -113,16 +122,16 @@ plt.show()
 print(params_all)
 print(params_all.columns)
 # %%
-params_all_hc = params_all[(params_all['I'] > 15) & (params_all['I'] < 500)]
+params_all_hc = params_all[(params_all['I'] > 100) & (params_all['I'] < 700)]
 params_flow = params_all_hc.groupby('flow')
 colors = we.get_colors(len(params_flow))
 intersections = []
 for (flow,group),c in zip(params_flow,colors):
 #    plt.plot(group['I'],group['R1'],'-',c=c,label = flow)
-    plt.plot(group['I'],1/group['R1'],'-',c=c,label = flow)
-    k,q = np.polyfit(group['I'],1/group['R1'],1)
+    plt.plot(group['I'],group['R0'],'-',c=c,label = flow)
+    k,q = np.polyfit(group['I'],1/group['R2'],1)
     intersections.append((flow,q))
-    plt.plot(group['I'],k*group['I']+q,'--',c=c)
+    # plt.plot(group['I'],k*group['I']+q,'--',c=c)
 plt.xlabel('Current (mA)')
 
 plt.legend()
@@ -133,5 +142,6 @@ plt.legend()
 plt.show()
 # %%
 plt.plot([int(flow) for flow,q in intersections],[q for flow,q in intersections],'-o')
+plt.grid()
 plt.xlabel('Flow (sccm)')
 plt.ylabel('1/R1 at I=0 (S)')
