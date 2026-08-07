@@ -1,0 +1,42 @@
+import os
+import numpy as np
+
+def clean_xye_files(root_dir):
+    for foldername, subfolders, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename.endswith('.xye'):
+                file_path = os.path.join(foldername, filename)
+
+                try:
+                    with open(file_path, 'r') as f:
+                        lines = f.readlines()
+
+                    # Split into header and data lines
+                    header_lines = [line for line in lines if line.strip().startswith('#')]
+                    data_lines = [line for line in lines if not line.strip().startswith('#') and line.strip()]
+
+                    # Process data lines
+                    cleaned_data_lines = []
+                    for line in data_lines:
+                        try:
+                            values = [float(val) for val in line.split()]
+                            if all(np.isfinite(values)) and all(val != 0.0 for val in values):
+                                cleaned_data_lines.append(line)
+                        except ValueError:
+                            # Skip malformed lines
+                            continue
+
+                    # Write back: header + cleaned data
+                    with open(file_path, 'w') as f:
+                        f.writelines(header_lines)
+                        f.writelines(cleaned_data_lines)
+
+                    print(f"Cleaned: {file_path} ({len(data_lines) - len(cleaned_data_lines)} rows removed)")
+
+                except Exception as e:
+                    print(f"Failed to process {file_path}: {e}")
+
+
+
+root_folder = "C:/Users/Herman/Desktop/Elektrolyzéry výzkum/Grenoble 2025 2/Diffraction/Transmissions before - Copy"
+clean_xye_files(root_folder)
