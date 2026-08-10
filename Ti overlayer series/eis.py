@@ -27,17 +27,8 @@ if ip is not None:
 #         ]
 
 files = [
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\323_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\088_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\319_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\101_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\087_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\090_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\099_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\317_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\318_exported.csv",
-             r"C:\Users\Herman\OneDrive - Univerzita Karlova\Racek\089_exported.csv",
-
+    r"C:\Users\Herman\OneDrive - Univerzita Karlova\Ti overlayer\129_export.csv",
+    r"C:\Users\Herman\OneDrive - Univerzita Karlova\Ti overlayer\159_export.csv",
         ]
 
 # %%
@@ -54,7 +45,7 @@ for i in range(18):
             
             if cycle == i:
 
-                ax[0].plot(group['Ecell_V'], group['R1'],'-', c=c, )
+                ax[0].plot(group['Ecell_V'], group['R0'],'-', c=c, )
                 ax[1].plot(group['I_mA'], group['Ecell_V'],'-',c=c,label=file.split('\\')[-1][:3])
                 # Find index of Ecell_V closest to 1.6
                 # idx_closest = (group['Ecell_V'] - 1.6).abs().idxmin()
@@ -71,7 +62,7 @@ for i in range(18):
     plt.show()
 # %%
 
-for i in range(1,16):
+for i in range(13,14):
     colors = we.get_colors(len(files))
     fig, ax = plt.subplots(1,2, figsize=(12, 6))
     for file,c in zip(files, colors):
@@ -83,8 +74,8 @@ for i in range(1,16):
             
             if cycle == i:
 
-                ax[0].plot(group['Time'], group['R2'],'-', c=c, )
-                ax[1].plot(group['Time'], group['I_mA'],'-',c=c,label=file.split('\\')[-1][:3])
+                ax[0].plot(group['Time'], group['R0']*4.84,'-', c=c, )
+                ax[1].plot(group['Time'], group['I_mA']/4.84,'-',c=c,label=file.split('\\')[-1][:3])
                 # Find index of Ecell_V closest to 1.6
                 # idx_closest = (group['Ecell_V'] - 1.6).abs().idxmin()
                 # print(group.loc[idx_closest, 'I_mA'])
@@ -93,10 +84,15 @@ for i in range(1,16):
     # plt.ylim(0,25)
     # plt.xlim(0,500)
 
-    ax[0].set_xlabel('Time')
-    ax[0].set_ylabel('R1 (Ohm)')
-    ax[1].set_xlabel('Current (mA)')
-    ax[1].set_ylabel('Cell Voltage (V)')
+    ax[0].set_xlabel('Time (Loops)')
+    ax[0].set_ylabel('R_ohm (Ohm cm**2)')
+    ax[1].set_xlabel('Time (Loops)')
+    ax[1].set_ylabel('Current (mA/cm**2)')
     ax[1].legend()
+    ax[0].set_xlim(0,10)
+    ax[0].set_ylim(0,0.14)
+    ax[1].set_xlim(0,10)
+    ax[1].set_ylim(0,650)
     plt.title(i)
     plt.show()
+# %%
