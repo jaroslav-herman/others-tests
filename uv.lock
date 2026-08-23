@@ -139,18 +139,8 @@ wheels = [
 [[package]]
 name = "bayes-drt2"
 version = "0.2"
-source = { editable = "../bayes-drt2" }
+source = { git = "https://github.com/jaroslav-herman/bayes-drt2#836f66fa4b791fa353ac6ea4540ce5e752f05774" }
 dependencies = [
-    { name = "cmdstanpy" },
-    { name = "cvxopt" },
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "scipy" },
-]
-
-[package.metadata]
-requires-dist = [
     { name = "cmdstanpy" },
     { name = "cvxopt" },
     { name = "matplotlib" },
@@ -423,8 +413,6 @@ name = "elchem"
 version = "0.1.0"
 source = { editable = "../Electrochemical_processing_full" }
 dependencies = [
-    { name = "hybrid-drt" },
-    { name = "impedance" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pandas" },
@@ -432,15 +420,15 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hybrid-drt", git = "https://github.com/jdhuang-csm/hybrid-drt" },
-    { name = "impedance", specifier = ">=1.7.1" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "openpyxl", marker = "extra == 'excel'" },
     { name = "pandas" },
     { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pyyaml", marker = "extra == 'gui'" },
+    { name = "streamlit", marker = "extra == 'gui'" },
 ]
-provides-extras = ["excel", "dev"]
+provides-extras = ["excel", "dev", "gui"]
 
 [[package]]
 name = "executing"
@@ -497,7 +485,7 @@ wheels = [
 [[package]]
 name = "galvani"
 version = "0.5.0"
-source = { git = "https://github.com/jaroslav-herman/galvani#a5b219bb65ae3e29b55834886d41ed979c34ea10" }
+source = { git = "https://github.com/jaroslav-herman/galvani#bd6d3d6b688afda9a73a59c07089ad57e5042101" }
 dependencies = [
     { name = "numpy" },
 ]
@@ -1298,7 +1286,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bayes-drt2", editable = "../bayes-drt2" },
+    { name = "bayes-drt2", git = "https://github.com/jaroslav-herman/bayes-drt2" },
     { name = "elchem", editable = "../Electrochemical_processing_full" },
     { name = "hybrid-drt", git = "https://github.com/jdhuang-csm/hybrid-drt" },
     { name = "impedance", specifier = ">=1.7.1" },
@@ -1370,7 +1358,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -2048,6 +2036,7 @@ name = "wepy"
 version = "0.1.0"
 source = { editable = "../wepy" }
 dependencies = [
+    { name = "bayes-drt2" },
     { name = "galvani" },
     { name = "hybrid-drt" },
     { name = "impedance" },
@@ -2060,6 +2049,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bayes-drt2", git = "https://github.com/jaroslav-herman/bayes-drt2" },
     { name = "galvani", git = "https://github.com/jaroslav-herman/galvani" },
     { name = "hybrid-drt", git = "https://github.com/jdhuang-csm/hybrid-drt" },
     { name = "impedance", specifier = ">=1.7.1" },

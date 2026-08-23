@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-wepy = { path = "../wepy", editable = true }
 hybrid-drt = { git = "https://github.com/jdhuang-csm/hybrid-drt" }
-bayes-drt2 = { path = "../bayes-drt2", editable = true }
+bayes-drt2 = { git = "https://github.com/jaroslav-herman/bayes-drt2" }
 elchem = { path = "../Electrochemical_processing_full", editable = true }
+wepy = { path = "../wepy", editable = true }
