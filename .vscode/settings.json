@@ -1,0 +1,20 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.envFile": "${workspaceFolder}\\.env",
+    "jupyter.jupyterServerType": "local",
+    "files.watcherExclude": {
+        "**/.venv/**": true,
+        "**/.matplotlib/**": true,
+        "**/.ipython/**": true,
+        "**/__pycache__/**": true,
+        "**/results/**": true
+    },
+    "search.exclude": {
+        "**/.venv": true,
+        "**/.matplotlib": true,
+        "**/.ipython": true,
+        "**/__pycache__": true,
+        "**/results": true
+    }
+}

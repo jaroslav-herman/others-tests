@@ -1,4 +1,7 @@
 import wepy.basics as we
 
-data = we.read_file(r"\\ELECTROLYZER\PEM-WE_measurements\2026\457_VII_cathode_etching_series_0min\VII_Day2_Procedure1_03_SV_C02.mpr")
+file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\467_III_cathode_etching_series_20min\VIII_Day10_Procedure1_05_PEIS_C01.mpr"
+# MPR files are binary Bio-Logic files.  Some newer files contain columns that
+# the installed Galvani version does not know yet, so keep the known columns.
+data = we.read_mpr(file)
 print(data.columns)

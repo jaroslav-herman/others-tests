@@ -24,6 +24,7 @@ SAMPLE_NAMES_FROM_GOOGLE_SHEET = {
     "467": "cathode_etching_series_20min",
     "468": "cathode_etching_series_210min",
     "470": "cathode_etching_series_GDE",
+    "476": "cathode_etching_series_70min",
 }
 SAMPLE_IDS = tuple(SAMPLE_NAMES_FROM_GOOGLE_SHEET)
 CELL_VOLTAGES = (1.6, 1.8, 2.0)

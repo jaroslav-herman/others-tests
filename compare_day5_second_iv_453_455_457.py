@@ -57,10 +57,10 @@ def find_sample_folders() -> dict[str, Path]:
 
 
 def second_iv(folder: Path):
-    """Read cycle 2 from the first valid Day 4 SV MPR file."""
+    """Read cycle 2 from the first valid Day 7 SV MPR file."""
     files = we.load_files(
         str(folder),
-        contains_string=["Day3", "SV"],
+        contains_string=["Day7", "SV"],
         extension=".mpr",
         natural_sort=True,
         mode="all",
@@ -95,7 +95,7 @@ def main() -> None:
 
     axis.set_xlabel("Current (mA)")
     axis.set_ylabel("Cell voltage (V)")
-    axis.set_title("Day 5 — second IV curve")
+    axis.set_title("Day 7 — second IV curve")
     axis.grid(False)
     axis.legend(frameon=False)
     fig.tight_layout()
