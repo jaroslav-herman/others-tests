@@ -9,3 +9,8 @@
 - Use the sample `Type` from the live Google Sheet for folder selection: `AEM`
   samples are under the year's `AEM-WE` subfolder; other known types are under
   the year folder; if `Type` is blank or unavailable, search both locations.
+- Treat FTACV work in this project as Python-based Fourier Transform Alternating
+  Current cyclic voltammetry analysis. Prefer the project's data-processing
+  workflow for loading, cleaning, transforming, filtering, validating, and
+  plotting electrochemical time-series data, with `.mpr` as the default source
+  format.
