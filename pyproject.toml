@@ -6,18 +6,17 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "bayes-drt2",
-    "elchem",
     "hybrid-drt",
     "impedance>=1.7.1",
     "jupyter>=1.1.1",
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "pandas>=3.0.3",
+    "qrcode>=8.2",
     "wepy",
 ]
 
 [tool.uv.sources]
 hybrid-drt = { git = "https://github.com/jdhuang-csm/hybrid-drt" }
 bayes-drt2 = { git = "https://github.com/jaroslav-herman/bayes-drt2" }
-elchem = { path = "../Electrochemical_processing_full", editable = true }
 wepy = { path = "../wepy", editable = true }

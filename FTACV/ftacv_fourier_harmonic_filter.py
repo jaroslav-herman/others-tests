@@ -142,6 +142,16 @@ def output_files_for(path: Path) -> tuple[Path, ...]:
     return tuple(output_folder / f"{path.stem}{suffix}" for suffix in OUTPUT_SUFFIXES)
 
 
+def read_input_data(path: Path) -> pd.DataFrame:
+    """Read BioLogic MPR data or a simulator CSV with the same core columns."""
+    if path.suffix.lower() == ".csv":
+        return pd.read_csv(path)
+    reader = getattr(we, "read_file_safe", None)
+    if reader is None:
+        reader = we.read_file
+    return reader(str(path))
+
+
 def process_file(
     path: Path,
     fundamental_hz: float,
@@ -152,7 +162,7 @@ def process_file(
     edge_guard_cycles: float,
 ) -> None:
     process_started = perf_counter()
-    data = we.read_file_safe(str(path))
+    data = read_input_data(path)
     if data is None or data.empty:
         print(f"Skipping unreadable/empty file: {path.name}")
         return
@@ -396,6 +406,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument(
+        "--extension",
+        choices=("mpr", "csv", "all"),
+        default="mpr",
+        help="Input file type for folder discovery; direct file inputs ignore this option.",
+    )
+    parser.add_argument(
         "--frequency",
         type=float,
         default=None,
@@ -468,7 +484,11 @@ def main() -> None:
             "--bandwidth-bins and --trim-cycles must be >= 0"
         )
 
-    files = sorted(args.input.rglob("*.mpr"))
+    if args.input.is_file():
+        files = [args.input.resolve()]
+    else:
+        patterns = ("*.mpr", "*.csv") if args.extension == "all" else (f"*.{args.extension}",)
+        files = sorted({file for pattern in patterns for file in args.input.rglob(pattern)})
     if args.all_files and args.file_name:
         raise SystemExit("Use either --all-files or --file-name, not both")
     process_all = args.all_files or (not args.file_name and not DEFAULT_FILE_NAMES)

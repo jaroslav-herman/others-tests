@@ -14,3 +14,11 @@
   workflow for loading, cleaning, transforming, filtering, validating, and
   plotting electrochemical time-series data, with `.mpr` as the default source
   format.
+
+- For general electrochemical plotting requests, use wepy.basics.read_file() to load .mpr or .mpt files, extract data columns with automatic handling of <I>/mA vs I/mA naming variations, use wepy.get_colors() for multi-series color consistency, and create project subfolders inside others-tests by default unless a specific output location is requested.
+
+- When creating or editing files (especially images), provide direct file paths in the response so users can instantly access them. Use markdown image syntax for PNG/JPG files: ![description](file:///absolute/path/to/file.png). For other file types, provide the absolute path as a clickable link.
+
+- When providing file links in chat, use the absolute Windows path without file:/// protocol for best compatibility. Format: C:\Users\...\file.png. For images, also include markdown syntax: ![alt](C:\Users\...\file.png). Test links before finalizing response.
+
+- For creating polarization curve plots from SV technique data: use wepy.load_files() to discover .mpr files containing 'SV' in the filename, load them with wepy.read_file(), extract IV curves with wepy.IV_curves_data(data), use wepy.get_colors() for multi-series coloring, plot I/mA vs control/V (or Ecell/V), and save as PNG. Reference: plot_polarization_curve_443_MoS2.py in Summer projects/MoS2.

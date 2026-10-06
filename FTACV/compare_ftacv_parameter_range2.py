@@ -9,6 +9,7 @@ input root.
 from __future__ import annotations
 
 import re
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -205,12 +206,22 @@ def make_groups(results: list[Result]) -> dict[str, list[list[Result]]]:
 
 
 def main() -> None:
-    results = discover_results(INPUT_ROOT)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", type=Path, default=INPUT_ROOT)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Output root for PNG comparisons; defaults to subfolders under --input.",
+    )
+    args = parser.parse_args()
+    results = discover_results(args.input)
     groups = make_groups(results)
+    output_root = args.output or args.input
     output_dirs = {
-        "frequency": INPUT_ROOT / "comparisons_by_frequency",
-        "amplitude": INPUT_ROOT / "comparisons_by_amplitude",
-        "scan_rate": INPUT_ROOT / "comparisons_by_scan_rate",
+        "frequency": output_root / "comparisons_by_frequency",
+        "amplitude": output_root / "comparisons_by_amplitude",
+        "scan_rate": output_root / "comparisons_by_scan_rate",
     }
     graph_count = 0
     for kind, kind_groups in groups.items():
@@ -219,7 +230,7 @@ def main() -> None:
             plot_dc_current(group, output_dirs[kind], kind)
             graph_count += 2
     print(f"Discovered {len(results)} complete result sets")
-    print(f"Created {graph_count} graphs in {len(output_dirs)} folders under {INPUT_ROOT}")
+    print(f"Created {graph_count} graphs in {len(output_dirs)} folders under {args.input}")
     for kind, kind_groups in groups.items():
         print(f"{kind}: {len(kind_groups)} comparison groups -> {output_dirs[kind]}")
 
