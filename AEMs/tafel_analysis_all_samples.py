@@ -338,12 +338,7 @@ def analyze_tafel_sample(csv_path, sample_id,
     ax.axhline(y=60, color='gray', linestyle=':', alpha=0.5, label='60 mV/dec')
     ax.axhline(y=80, color='gray', linestyle=':', alpha=0.5, label='80 mV/dec')
     
-    # Annotate each point
-    for i, row in results_df.iterrows():
-        ax.annotate(f"{row['tafel_slope']:.1f}",
-                    xy=(row['time'], row['tafel_slope']),
-                    xytext=(row['time'], row['tafel_slope'] + 1),
-                    ha='center', va='bottom', fontsize=9)
+    # Removed value annotations as requested
     
     ax.set_xlabel('Time', fontsize=12)
     ax.set_ylabel('Tafel Slope (mV/dec)', fontsize=12)
