@@ -24,7 +24,7 @@ from pathlib import Path
 SAMPLES = ['474', '498', '499']
 
 # Current range for analysis (mA)
-CURRENT_MIN = 5
+CURRENT_MIN = 10
 CURRENT_MAX = 700
 
 # Fit configuration
