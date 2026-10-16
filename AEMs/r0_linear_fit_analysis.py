@@ -320,12 +320,8 @@ def analyze_r0_linear_sample(csv_path, sample_id,
     # Add horizontal line at q=0
     ax.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
     
-    # Annotate each point with its q value
-    for i, row in results_df.iterrows():
-        ax.annotate(f"{row['q']:.3f}",
-                    xy=(row['time'], row['q']),
-                    xytext=(row['time'], row['q'] + (0.005 if row['q'] >= 0 else -0.01)),
-                    ha='center', va='bottom' if row['q'] >= 0 else 'top', fontsize=9)
+    # Annotate each point with its time value (not q value)
+    # Removed value annotations as requested
     
     ax.set_xlabel('Time', fontsize=12)
     ax.set_ylabel('Intercept q (Ohm)', fontsize=12)
@@ -353,11 +349,7 @@ def analyze_r0_linear_sample(csv_path, sample_id,
     
     ax.axhline(y=0, color='black', linestyle='--', linewidth=1, alpha=0.5)
     
-    for i, row in results_df.iterrows():
-        ax.annotate(f"{row['k']:.2e}",
-                    xy=(row['time'], row['k']),
-                    xytext=(row['time'], row['k'] + (abs(row['k'])*0.1 if row['k'] != 0 else 0.0001)),
-                    ha='center', va='bottom' if row['k'] >= 0 else 'top', fontsize=8)
+    # Removed value annotations as requested
     
     ax.set_xlabel('Time', fontsize=12)
     ax.set_ylabel('Slope k (Ohm/mA)', fontsize=12)
