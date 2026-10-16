@@ -5,9 +5,9 @@ Plot all resistances (R0, R1, R2, R3) as a function of:
 2. Current (with logarithmic Y scale)
 
 Following the pattern from eis_parameters.py:
-- Different colors based on Time
-- Different line styles/markers based on resistance type
-- All samples in one graph for comparison
+- Different colors based on Time (using rainbow colormap like original)
+- Each sample processed separately with its own color array
+- All samples overlaid in combined plots
 
 Usage:
     python resistances_vs_voltage_current.py
@@ -17,6 +17,18 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import shutil
+
+
+def get_colors(n=10, colormap="rainbow"):
+    """
+    Generate a list of colors sampled evenly from a matplotlib colormap.
+    Same as wepy.basics.get_colors() from original script.
+    """
+    cmap = plt.get_cmap(colormap)
+    colors = cmap(np.linspace(0, 1, n))
+    return colors
+
 
 # ============================================================================
 # CONFIGURATION
@@ -34,14 +46,8 @@ SAMPLE_LABELS = {
     '499': 'Sample 499'
 }
 
-# Resistance types and their colors/markers
+# Resistance types
 RESISTANCE_TYPES = ['R0', 'R1', 'R2', 'R3']
-RESISTANCE_COLORS = {
-    'R0': 'C0',  # First color in tab10
-    'R1': 'C1',  # Second color in tab10
-    'R2': 'C2',  # Third color in tab10
-    'R3': 'C3'   # Fourth color in tab10
-}
 RESISTANCE_MARKERS = {
     'R0': 'o',
     'R1': 's',
@@ -84,79 +90,56 @@ def load_sample_data(sample_id):
     
     return df
 
+
 # ============================================================================
-# Main Analysis
+# Plotting Functions (using original rainbow color scheme from eis_parameters.py)
 # ============================================================================
 
-def main():
-    """Plot resistances vs voltage and current for all samples."""
-    
-    # Load all data
-    all_data = []
-    for sample_id in SAMPLES:
-        df = load_sample_data(sample_id)
-        if df is not None:
-            all_data.append(df)
-    
-    if not all_data:
-        print("No data loaded. Exiting.")
-        return
-    
-    combined_df = pd.concat(all_data, ignore_index=True)
-    
-    # Create output directory
-    output_dir = Path("resistances_comparison")
-    output_dir.mkdir(exist_ok=True, parents=True)
-    
-    # ========================================================================
-    # Plot 1: All resistances vs Cell Voltage (log Y scale)
-    # Different colors based on Time, different markers based on resistance type
-    # ========================================================================
-    
-    print("Creating resistances vs voltage plot...")
+def plot_all_resistances_vs_voltage(combined_df, output_dir):
+    """Plot all resistances vs voltage - all samples overlaid, original color scheme per sample."""
+    print("Creating all resistances vs voltage plot...")
     
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
     
-    # Get unique Time points for color mapping
-    all_times = sorted(combined_df['Time'].unique())
-    n_times = len(all_times)
-    
-    # Create a colormap for Time points
-    time_colors = plt.cm.viridis(np.linspace(0, 1, n_times))
-    
     # Create legend handles
     legend_handles = []
-    legend_labels = []
     
     for sample_id in SAMPLES:
         sample_data = combined_df[combined_df['sample_id'] == sample_id]
         
-        for time in all_times:
+        # Get unique Time points for this sample
+        sample_times = sorted(sample_data['Time'].unique())
+        len_data = len(sample_times)
+        
+        # Generate colors for this sample: 4 resistance types * len_data
+        colors = get_colors(4 * len_data, colormap="rainbow")
+        
+        index = 0
+        for time in sample_times:
             time_data = sample_data[sample_data['Time'] == time]
-            if len(time_data) == 0:
-                continue
-            
             time_data = time_data.sort_values('Ecell_V')
             
-            # Get color for this Time
-            time_idx = all_times.index(time)
-            color = time_colors[time_idx]
+            # Plot each resistance with its assigned color (original pattern)
+            # R0: colors[index]
+            # R1: colors[len_data + index]
+            # R2: colors[2*len_data + index]
+            # R3: colors[3*len_data + index]
             
-            for r_type in RESISTANCE_TYPES:
-                marker = RESISTANCE_MARKERS[r_type]
-                label = f'{sample_id} {r_type}'
-                
-                ax.plot(time_data['Ecell_V'], time_data[r_type],
-                        marker=marker, color=color, linestyle='-',
-                        markersize=5, alpha=0.7, linewidth=1)
+            ax.plot(time_data['Ecell_V'], time_data['R0'],
+                    'o-', color=colors[index], markersize=5, alpha=0.7, linewidth=1)
             
-            # Add Time legend entry (only once per sample)
-            if time == all_times[0]:
-                legend_handles.append(plt.Line2D([0], [0], 
-                    marker='o', color='black', linestyle='-',
-                    markersize=5, label=f'{sample_id} Time {time}'))
+            ax.plot(time_data['Ecell_V'], time_data['R1'],
+                    'o-', color=colors[len_data + index], markersize=5, alpha=0.7, linewidth=1)
+            
+            ax.plot(time_data['Ecell_V'], time_data['R2'],
+                    'o-', color=colors[2*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+            
+            ax.plot(time_data['Ecell_V'], time_data['R3'],
+                    'o-', color=colors[3*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+            
+            index += 1
     
-    # Add resistance type legend entries
+    # Add legend for resistance types
     for r_type in RESISTANCE_TYPES:
         legend_handles.append(plt.Line2D([0], [0],
             marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
@@ -173,46 +156,48 @@ def main():
     plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")
-    
-    # ========================================================================
-    # Plot 2: All resistances vs Current (log Y scale)
-    # ========================================================================
-    
-    print("Creating resistances vs current plot...")
+
+
+def plot_all_resistances_vs_current(combined_df, output_dir):
+    """Plot all resistances vs current - all samples overlaid, original color scheme per sample."""
+    print("Creating all resistances vs current plot...")
     
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
     
+    # Create legend handles
     legend_handles = []
-    legend_labels = []
     
     for sample_id in SAMPLES:
         sample_data = combined_df[combined_df['sample_id'] == sample_id]
         
-        for time in all_times:
+        # Get unique Time points for this sample
+        sample_times = sorted(sample_data['Time'].unique())
+        len_data = len(sample_times)
+        
+        # Generate colors for this sample: 4 resistance types * len_data
+        colors = get_colors(4 * len_data, colormap="rainbow")
+        
+        index = 0
+        for time in sample_times:
             time_data = sample_data[sample_data['Time'] == time]
-            if len(time_data) == 0:
-                continue
-            
             time_data = time_data.sort_values('I_mA')
             
-            # Get color for this Time
-            time_idx = all_times.index(time)
-            color = time_colors[time_idx]
+            # Plot each resistance with its assigned color (original pattern)
+            ax.plot(time_data['I_mA'], time_data['R0'],
+                    'o-', color=colors[index], markersize=5, alpha=0.7, linewidth=1)
             
-            for r_type in RESISTANCE_TYPES:
-                marker = RESISTANCE_MARKERS[r_type]
-                
-                ax.plot(time_data['I_mA'], time_data[r_type],
-                        marker=marker, color=color, linestyle='-',
-                        markersize=5, alpha=0.7, linewidth=1)
+            ax.plot(time_data['I_mA'], time_data['R1'],
+                    'o-', color=colors[len_data + index], markersize=5, alpha=0.7, linewidth=1)
             
-            # Add Time legend entry (only once per sample)
-            if time == all_times[0]:
-                legend_handles.append(plt.Line2D([0], [0], 
-                    marker='o', color='black', linestyle='-',
-                    markersize=5, label=f'{sample_id} Time {time}'))
+            ax.plot(time_data['I_mA'], time_data['R2'],
+                    'o-', color=colors[2*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+            
+            ax.plot(time_data['I_mA'], time_data['R3'],
+                    'o-', color=colors[3*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+            
+            index += 1
     
-    # Add resistance type legend entries
+    # Add legend for resistance types
     for r_type in RESISTANCE_TYPES:
         legend_handles.append(plt.Line2D([0], [0],
             marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
@@ -229,113 +214,118 @@ def main():
     plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")
+
+
+def plot_sample_resistances_vs_voltage(sample_data, sample_id, output_dir):
+    """Plot resistances vs voltage for a single sample with original color scheme."""
+    print(f"Creating resistances vs voltage plot for sample {sample_id}...")
     
-    # ========================================================================
-    # Plot 3: Resistances vs Voltage - Separate by Sample
-    # Each sample gets its own plot with all Times
-    # ========================================================================
+    # Get unique Time points for this sample
+    sample_times = sorted(sample_data['Time'].unique())
+    len_data = len(sample_times)
     
-    print("Creating per-sample resistances vs voltage plots...")
+    # Generate colors for this sample: 4 resistance types * len_data
+    colors = get_colors(4 * len_data, colormap="rainbow")
     
-    for sample_id in SAMPLES:
-        sample_data = combined_df[combined_df['sample_id'] == sample_id]
-        
-        # Get unique Time points for this sample
-        sample_times = sorted(sample_data['Time'].unique())
-        n_sample_times = len(sample_times)
-        
-        # Create colormap for Times
-        sample_time_colors = plt.cm.viridis(np.linspace(0, 1, n_sample_times))
-        
-        fig, ax = plt.subplots(1, 1, figsize=(12, 7))
-        
-        legend_handles = []
-        
-        for time_idx, time in enumerate(sample_times):
-            time_data = sample_data[sample_data['Time'] == time]
-            time_data = time_data.sort_values('Ecell_V')
-            color = sample_time_colors[time_idx]
-            
-            for r_type in RESISTANCE_TYPES:
-                marker = RESISTANCE_MARKERS[r_type]
-                ax.plot(time_data['Ecell_V'], time_data[r_type],
-                        marker=marker, color=color, linestyle='-',
-                        markersize=5, alpha=0.7, linewidth=1,
-                        label=f'Time {time} {r_type}' if time_idx == 0 else '')
-        
-        # Add legend entries for resistance types
-        for r_type in RESISTANCE_TYPES:
-            legend_handles.append(plt.Line2D([0], [0],
-                marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
-                markersize=5, label=RESISTANCE_LABELS[r_type]))
-        
-        ax.set_xlabel('Cell Voltage (V)', fontsize=12)
-        ax.set_ylabel('Resistance (Ohm)', fontsize=12)
-        ax.set_title(f'Sample {sample_id}: All Resistances vs Cell Voltage (Log Scale)', fontsize=14)
-        ax.set_yscale('log')
-        ax.grid(True, which='both', linestyle='--', alpha=0.3)
-        ax.legend(handles=legend_handles, fontsize=8)
-        
-        plot_path = output_dir / f"{sample_id}_resistances_vs_voltage.{PLOT_FORMAT}"
-        plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
-        plt.close()
-        print(f"  Saved: {plot_path}")
+    fig, ax = plt.subplots(1, 1, figsize=(12, 7))
     
-    # ========================================================================
-    # Plot 4: Resistances vs Current - Separate by Sample
-    # ========================================================================
+    legend_handles = []
     
-    print("Creating per-sample resistances vs current plots...")
+    index = 0
+    for time in sample_times:
+        time_data = sample_data[sample_data['Time'] == time]
+        time_data = time_data.sort_values('Ecell_V')
+        
+        # Plot each resistance with its assigned color (original pattern)
+        ax.plot(time_data['Ecell_V'], time_data['R0'],
+                'o-', color=colors[index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['Ecell_V'], time_data['R1'],
+                'o-', color=colors[len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['Ecell_V'], time_data['R2'],
+                'o-', color=colors[2*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['Ecell_V'], time_data['R3'],
+                'o-', color=colors[3*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        index += 1
     
-    for sample_id in SAMPLES:
-        sample_data = combined_df[combined_df['sample_id'] == sample_id]
-        
-        # Get unique Time points for this sample
-        sample_times = sorted(sample_data['Time'].unique())
-        n_sample_times = len(sample_times)
-        
-        # Create colormap for Times
-        sample_time_colors = plt.cm.viridis(np.linspace(0, 1, n_sample_times))
-        
-        fig, ax = plt.subplots(1, 1, figsize=(12, 7))
-        
-        legend_handles = []
-        
-        for time_idx, time in enumerate(sample_times):
-            time_data = sample_data[sample_data['Time'] == time]
-            time_data = time_data.sort_values('I_mA')
-            color = sample_time_colors[time_idx]
-            
-            for r_type in RESISTANCE_TYPES:
-                marker = RESISTANCE_MARKERS[r_type]
-                ax.plot(time_data['I_mA'], time_data[r_type],
-                        marker=marker, color=color, linestyle='-',
-                        markersize=5, alpha=0.7, linewidth=1,
-                        label=f'Time {time} {r_type}' if time_idx == 0 else '')
-        
-        # Add legend entries for resistance types
-        for r_type in RESISTANCE_TYPES:
-            legend_handles.append(plt.Line2D([0], [0],
-                marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
-                markersize=5, label=RESISTANCE_LABELS[r_type]))
-        
-        ax.set_xlabel('Current (mA)', fontsize=12)
-        ax.set_ylabel('Resistance (Ohm)', fontsize=12)
-        ax.set_title(f'Sample {sample_id}: All Resistances vs Current (Log Scale)', fontsize=14)
-        ax.set_yscale('log')
-        ax.grid(True, which='both', linestyle='--', alpha=0.3)
-        ax.legend(handles=legend_handles, fontsize=8)
-        
-        plot_path = output_dir / f"{sample_id}_resistances_vs_current.{PLOT_FORMAT}"
-        plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
-        plt.close()
-        print(f"  Saved: {plot_path}")
+    # Add legend for resistance types
+    for r_type in RESISTANCE_TYPES:
+        legend_handles.append(plt.Line2D([0], [0],
+            marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
+            markersize=5, label=RESISTANCE_LABELS[r_type]))
     
-    # ========================================================================
-    # Plot 5: Combined - All samples, resistances vs Voltage
-    # Different colors for each sample, different markers for each resistance
-    # ========================================================================
+    ax.set_xlabel('Cell Voltage (V)', fontsize=12)
+    ax.set_ylabel('Resistance (Ohm)', fontsize=12)
+    ax.set_title(f'Sample {sample_id}: All Resistances vs Cell Voltage (Log Scale)', fontsize=14)
+    ax.set_yscale('log')
+    ax.grid(True, which='both', linestyle='--', alpha=0.3)
+    ax.legend(handles=legend_handles, fontsize=8)
     
+    plot_path = output_dir / f"{sample_id}_resistances_vs_voltage.{PLOT_FORMAT}"
+    plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
+    plt.close()
+    print(f"  Saved: {plot_path}")
+
+
+def plot_sample_resistances_vs_current(sample_data, sample_id, output_dir):
+    """Plot resistances vs current for a single sample with original color scheme."""
+    print(f"Creating resistances vs current plot for sample {sample_id}...")
+    
+    # Get unique Time points for this sample
+    sample_times = sorted(sample_data['Time'].unique())
+    len_data = len(sample_times)
+    
+    # Generate colors for this sample: 4 resistance types * len_data
+    colors = get_colors(4 * len_data, colormap="rainbow")
+    
+    fig, ax = plt.subplots(1, 1, figsize=(12, 7))
+    
+    legend_handles = []
+    
+    index = 0
+    for time in sample_times:
+        time_data = sample_data[sample_data['Time'] == time]
+        time_data = time_data.sort_values('I_mA')
+        
+        # Plot each resistance with its assigned color (original pattern)
+        ax.plot(time_data['I_mA'], time_data['R0'],
+                'o-', color=colors[index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['I_mA'], time_data['R1'],
+                'o-', color=colors[len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['I_mA'], time_data['R2'],
+                'o-', color=colors[2*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        ax.plot(time_data['I_mA'], time_data['R3'],
+                'o-', color=colors[3*len_data + index], markersize=5, alpha=0.7, linewidth=1)
+        
+        index += 1
+    
+    # Add legend for resistance types
+    for r_type in RESISTANCE_TYPES:
+        legend_handles.append(plt.Line2D([0], [0],
+            marker=RESISTANCE_MARKERS[r_type], color='black', linestyle='-',
+            markersize=5, label=RESISTANCE_LABELS[r_type]))
+    
+    ax.set_xlabel('Current (mA)', fontsize=12)
+    ax.set_ylabel('Resistance (Ohm)', fontsize=12)
+    ax.set_title(f'Sample {sample_id}: All Resistances vs Current (Log Scale)', fontsize=14)
+    ax.set_yscale('log')
+    ax.grid(True, which='both', linestyle='--', alpha=0.3)
+    ax.legend(handles=legend_handles, fontsize=8)
+    
+    plot_path = output_dir / f"{sample_id}_resistances_vs_current.{PLOT_FORMAT}"
+    plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
+    plt.close()
+    print(f"  Saved: {plot_path}")
+
+
+def plot_all_samples_resistances_vs_voltage(combined_df, output_dir):
+    """Plot all samples resistances vs voltage - simple scatter with sample colors."""
     print("Creating combined resistances vs voltage plot (all samples)...")
     
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
@@ -365,11 +355,10 @@ def main():
     plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")
-    
-    # ========================================================================
-    # Plot 6: Combined - All samples, resistances vs Current
-    # ========================================================================
-    
+
+
+def plot_all_samples_resistances_vs_current(combined_df, output_dir):
+    """Plot all samples resistances vs current - simple scatter with sample colors."""
     print("Creating combined resistances vs current plot (all samples)...")
     
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
@@ -399,6 +388,70 @@ def main():
     plt.savefig(plot_path, dpi=PLOT_DPI, bbox_inches='tight')
     plt.close()
     print(f"  Saved: {plot_path}")
+
+
+# ============================================================================
+# Main Analysis
+# ============================================================================
+
+def main():
+    """Plot resistances vs voltage and current for all samples."""
+    
+    # Load all data
+    all_data = []
+    for sample_id in SAMPLES:
+        df = load_sample_data(sample_id)
+        if df is not None:
+            all_data.append(df)
+    
+    if not all_data:
+        print("No data loaded. Exiting.")
+        return
+    
+    combined_df = pd.concat(all_data, ignore_index=True)
+    
+    # Create output directory
+    output_dir = Path("resistances_comparison")
+    output_dir.mkdir(exist_ok=True, parents=True)
+    
+    # Also ensure sample folders exist
+    for sample_id in SAMPLES:
+        sample_dir = Path(f"sample_{sample_id}")
+        sample_dir.mkdir(exist_ok=True, parents=True)
+    
+    # ========================================================================
+    # Plot 1: All resistances vs Cell Voltage (log Y scale)
+    # Original color scheme: rainbow per sample, 4*len_data colors
+    # ========================================================================
+    plot_all_resistances_vs_voltage(combined_df, output_dir)
+    
+    # ========================================================================
+    # Plot 2: All resistances vs Current (log Y scale)
+    # Original color scheme: rainbow per sample, 4*len_data colors
+    # ========================================================================
+    plot_all_resistances_vs_current(combined_df, output_dir)
+    
+    # ========================================================================
+    # Plot 3-4: Per-sample plots with original color scheme
+    # ========================================================================
+    for sample_id in SAMPLES:
+        sample_data = combined_df[combined_df['sample_id'] == sample_id]
+        plot_sample_resistances_vs_voltage(sample_data, sample_id, output_dir)
+        plot_sample_resistances_vs_current(sample_data, sample_id, output_dir)
+        
+        # Copy per-sample plots to sample folder
+        for suffix in ['vs_voltage', 'vs_current']:
+            src = output_dir / f"{sample_id}_resistances_{suffix}.{PLOT_FORMAT}"
+            dst = Path(f"sample_{sample_id}") / f"{sample_id}_resistances_{suffix}.{PLOT_FORMAT}"
+            if src.exists():
+                shutil.copy2(src, dst)
+                print(f"  Copied: {src} -> {dst}")
+    
+    # ========================================================================
+    # Plot 5-6: Combined all samples plots
+    # ========================================================================
+    plot_all_samples_resistances_vs_voltage(combined_df, output_dir)
+    plot_all_samples_resistances_vs_current(combined_df, output_dir)
     
     print(f"\nResistances vs Voltage/Current analysis complete!")
     print(f"Output directory: {output_dir}")
