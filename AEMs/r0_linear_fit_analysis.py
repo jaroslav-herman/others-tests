@@ -25,8 +25,8 @@ from pathlib import Path
 SAMPLES = ['474', '498', '499']
 
 # Current range for analysis (mA)
-# NO UPPER LIMIT - evaluate whole current range
-CURRENT_MIN = 10
+# NO LIMITS - use entire current range
+CURRENT_MIN = 0
 CURRENT_MAX = None  # None means no upper limit
 
 # Fit configuration
@@ -102,12 +102,7 @@ def analyze_r0_linear_sample(csv_path, sample_id,
         time = int(time)
         color = colors[time_points.index(time)]
         
-        # Filter to current range (no upper limit)
-        if current_max is not None:
-            group = group[(group['I_mA'] >= current_min) & 
-                          (group['I_mA'] <= current_max)]
-        else:
-            group = group[group['I_mA'] >= current_min]
+        # Use entire current range (no filtering)
         
         if len(group) < 5:
             print(f"  Time {time}: Insufficient data ({len(group)} points)")
@@ -116,7 +111,7 @@ def analyze_r0_linear_sample(csv_path, sample_id,
         # Sort by current
         group = group.sort_values('I_mA')
         
-        # Short circuit correction
+        # Short circuit correction - YES, we do correct for short circuit
         i_short = group['I_mA'].iloc[0]
         I_corr = group['I_mA'].values - i_short
         R0 = group['R0'].values
