@@ -1,2 +1,4 @@
 .ipython/*
 !.ipython/.gitkeep
+results/
+Used data for dataset/

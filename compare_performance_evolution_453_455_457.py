@@ -13,7 +13,7 @@ from measurement_paths import candidate_measurement_roots
 
 
 YEAR = 2026
-SAMPLE_IDS = ("453", "455", "457","467","468", "470")
+SAMPLE_IDS = ("453", "455", "457","467","468", "470","476","480")
 CELL_VOLTAGES = (1.6, 1.8, 2.0)
 
 OUTPUT_DIR = Path("results")
@@ -107,7 +107,7 @@ def main() -> None:
         axis.set_xlabel("Measurement sequence")
         axis.set_ylabel("Current (mA)")
         axis.grid(False)
-        axis.legend(frameon=False)
+        axis.legend(fontsize=10, loc="best",)
         fig.suptitle(
             f"Performance evolution at {target_voltage:g} V"
         )

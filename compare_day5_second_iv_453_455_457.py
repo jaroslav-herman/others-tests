@@ -12,7 +12,7 @@ from measurement_paths import find_measurements_root
 
 
 YEAR = 2026
-SAMPLE_IDS = ("453", "455", "457","467", "468", '470')
+SAMPLE_IDS = ("453", "455", "457","467", "468", '470','476','480')
 OUTPUT = Path("results") / "day4_second_iv_comparison_453_455_457.png"
 
 # Names read from the shared sample table. Empty values intentionally fall
@@ -24,6 +24,8 @@ SAMPLE_NAMES = {
     "467": "cathode_etching_series_20min",
     "468": "cathode_etching_series_210min",
     "470": "cathode_etching_series_GDE",
+        "476": "cathode_etching_series_70min",
+    "480": "cathode_etching_series_210min",
 }
 
 
