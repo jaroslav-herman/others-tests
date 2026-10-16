@@ -22,3 +22,5 @@
 - When providing file links in chat, use the absolute Windows path without file:/// protocol for best compatibility. Format: C:\Users\...\file.png. For images, also include markdown syntax: ![alt](C:\Users\...\file.png). Test links before finalizing response.
 
 - For creating polarization curve plots from SV technique data: use wepy.load_files() to discover .mpr files containing 'SV' in the filename, load them with wepy.read_file(), extract IV curves with wepy.IV_curves_data(data), use wepy.get_colors() for multi-series coloring, plot I/mA vs control/V (or Ecell/V), and save as PNG. Reference: plot_polarization_curve_443_MoS2.py in Summer projects/MoS2.
+
+- **For AEMs EIS data processing**: Use `AEMs/process_eis_data.py` as the primary workflow. This script handles CSV files exported from eisyFIT, processes EIS fitting parameters (R0, R1, R2, R3, C1, C2, C3, C4, tau values), and generates standard plots (R vs I, C vs I, IV curves, time evolution). Always push changes to main branch after creating or modifying processing scripts so users can download results.
