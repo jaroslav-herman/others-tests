@@ -12,15 +12,15 @@ if ip is not None:
 # %%
 
 s499 = {
-    "path": r"C:\Users\Herman\OneDrive - Univerzita Karlova\AEM-WE\499_fit_export.csv",
+    "path": "sample_499/499_fit_export.csv",
     "etching": "499",
 }
 s498 = {
-    "path": r"C:\Users\Herman\OneDrive - Univerzita Karlova\AEM-WE\498_fit_export.csv",
+    "path": "sample_498/498_fit_export.csv",
     "etching": "498",
 }
 s474 = {
-    "path": r"C:\Users\Herman\OneDrive - Univerzita Karlova\AEM-WE\474_fit_export.csv",
+    "path": "sample_474/474_fit_export.csv",
     "etching": "474",
 }
 samples = [s499, s498, s474]

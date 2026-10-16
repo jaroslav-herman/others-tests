@@ -434,7 +434,7 @@ def main():
     all_comparisons = {}
     
     for sample_id in SAMPLES:
-        csv_path = Path(f"{sample_id}_fit_export.csv")
+        csv_path = Path(f"sample_{sample_id}/{sample_id}_fit_export.csv")
         if not csv_path.exists():
             print(f"Warning: {csv_path} not found, skipping...")
             continue

@@ -40,7 +40,7 @@ def load_sample_data(sample_id: str, data_dir: Path = None) -> pd.DataFrame:
     if data_dir is None:
         data_dir = DEFAULT_SAMPLES_DIR
     
-    csv_file = data_dir / f"{sample_id}_fit_export.csv"
+    csv_file = data_dir / f"sample_{sample_id}/{sample_id}_fit_export.csv"
     
     if not csv_file.exists():
         raise FileNotFoundError(f"Sample data file not found: {csv_file}")
@@ -64,9 +64,12 @@ def load_all_samples(data_dir: Path = None) -> Dict[str, pd.DataFrame]:
         data_dir = DEFAULT_SAMPLES_DIR
     
     samples = {}
-    for csv_file in data_dir.glob("*_fit_export.csv"):
-        sample_id = csv_file.stem.split("_")[0]
-        samples[sample_id] = load_sample_data(sample_id, data_dir)
+    for sample_dir in sorted(data_dir.iterdir()):
+        if sample_dir.is_dir() and sample_dir.name.startswith('sample_'):
+            sample_id = sample_dir.name.replace('sample_', '')
+            csv_file = sample_dir / f"{sample_id}_fit_export.csv"
+            if csv_file.exists():
+                samples[sample_id] = load_sample_data(sample_id, data_dir)
     
     return samples
 

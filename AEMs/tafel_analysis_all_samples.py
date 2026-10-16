@@ -417,9 +417,9 @@ def main():
     
     # Define samples
     samples = [
-        {'id': '474', 'file': '474_fit_export.csv'},
-        {'id': '498', 'file': '498_fit_export.csv'},
-        {'id': '499', 'file': '499_fit_export.csv'},
+        {'id': '474', 'file': 'sample_474/474_fit_export.csv'},
+        {'id': '498', 'file': 'sample_498/498_fit_export.csv'},
+        {'id': '499', 'file': 'sample_499/499_fit_export.csv'},
     ]
     
     # Run analysis for each sample

@@ -16,7 +16,7 @@ from pathlib import Path
 # Load and prepare data
 # ============================================================================
 
-df = pd.read_csv('499_fit_export.csv')
+df = pd.read_csv('sample_499/499_fit_export.csv')
 df['sample_id'] = '499'
 
 # Clean up duplicate column names
