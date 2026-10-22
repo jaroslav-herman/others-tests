@@ -132,6 +132,7 @@ Within each sample folder, analysis results are stored in subfolders:
 ### Comparison Folders
 Cross-sample comparison graphs are stored in:
 - `AEMs/comparisons_XXX_YYY_ZZZ/` (e.g., `comparisons_474_499_505/`)
+- If samples belong to a defined series (e.g., AEM Substrate Series), use the series name instead of sample numbers: `AEMs/AEM_Substrate_Series/`
 
 ---
 
