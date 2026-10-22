@@ -29,7 +29,4 @@
 
 - **For EIS CSV files from eisyFIT**: The `Time` column (capital T) represents the time evolution of fitted parameters. The `time/s` column (lowercase with /s) represents individual measurement timestamps. When a user requests "time evolution of parameters", plot against the `Time` column unless explicitly stated otherwise.
 
-- **Sample naming reference**: Use the Google Sheets file `electrolyzer_samples` (ID: `1ycoCdaol3zYWx8PDTvrI30eZV0nuC7ooFpEvz9qOlds`) as the primary source for sample names. Connect sample numbers from file/folder names to their `Sample Name` in this sheet. In comparison plots between samples, include legends with both the sample number and the sample name from the Google table. For samples 474, 499, and 505, use these specific names in legends:
-  - Sample 474: `VI_Ni_on_Ni_PTL`
-  - Sample 499: `V_Ni90nm(100)_on_etched_piperion`
-  - Sample 505: `V_Ni90nm(100)_non-etched_piperion`
+- **Sample naming reference**: Use the Google Sheets file `electrolyzer_samples` (ID: `1ycoCdaol3zYWx8PDTvrI30eZV0nuC7ooFpEvz9qOlds`) as the primary source for sample names. To obtain a sample name: look up the `Sample Number` column and use the corresponding value from the `Sample Name` column. In comparison plots between samples, include legends with both the sample number and the sample name from the Google table (format: `sample_number (sample_name)`).
