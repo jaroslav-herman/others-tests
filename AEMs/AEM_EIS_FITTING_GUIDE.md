@@ -154,6 +154,20 @@ Each analysis generates individual plots for each Time point:
 
 ---
 
+## Sample Series
+
+### AEM Substrate Series
+This series compares EIS results when catalyst is deposited on different substrates:
+- **Plain membrane**
+- **Etched membrane**
+- **PTL (Porous Transport Layer)**
+
+**Samples in this series**: 474, 499, 505
+
+This series is used for comparing how the substrate type affects electrochemical performance and EIS parameters.
+
+---
+
 ## Graph Delivery
 
 When asked to show graphs, provide direct GitHub links:
