@@ -13,7 +13,7 @@ For any AEM-related EIS fitting request, follow the workflows described in this 
 ## Primary Workflow
 
 ### Standard EIS Processing
-Use `AEMs/process_eis_data.py` as the primary workflow for:
+Use `AEMs/scripts/process_eis_data.py` as the primary workflow for:
 - Loading CSV files exported from eisyFIT
 - Processing EIS fitting parameters (R0, R1, R2, R3, C1, C2, C3, C4, tau values)
 - Generating standard plots (R vs I, C vs I, IV curves, time evolution)
@@ -24,13 +24,13 @@ Use `AEMs/process_eis_data.py` as the primary workflow for:
 
 ## Dedicated Linear Fit Analysis
 
-For new samples, work in the respective sample folder (`AEMs/sample_XXX/`). Create the following analyses using the dedicated Python scripts:
+For new samples, work in the respective sample folder (`AEMs/sample_XXX/`). Create the following analyses using the dedicated Python scripts from `AEMs/scripts/`:
 
 ### Scripts
-1. **`c1_linear_fit_analysis.py`** - Capacitance C1 linear fit analysis
-2. **`r0_linear_fit_analysis.py`** - Ohmic resistance R0 linear fit analysis
-3. **`c2_r2_c3_r3_linear_fit_analysis.py`** - Combined analysis for C2, R2, C3, R3
-4. **`tafel_analysis_all_samples.py`** - Tafel slope analysis
+1. **`scripts/c1_linear_fit_analysis.py`** - Capacitance C1 linear fit analysis
+2. **`scripts/r0_linear_fit_analysis.py`** - Ohmic resistance R0 linear fit analysis
+3. **`scripts/c2_r2_c3_r3_linear_fit_analysis.py`** - Combined analysis for C2, R2, C3, R3
+4. **`scripts/tafel_analysis_all_samples.py`** - Tafel slope analysis
 
 ### Setup for New Samples
 1. Add the new sample ID to the `SAMPLES` list in each script
@@ -116,6 +116,13 @@ Example: `474 (VI_Ni_on_Ni_PTL)`
 
 ## Folder Structure
 
+### Root Level
+- `AEM_EIS_FITTING_GUIDE.md` - This guide file (always kept at root)
+- `scripts/` - All Python processing scripts
+- `comparisons/` - Cross-sample comparison graphs and summary files
+- `comparisons_XXX_YYY_ZZZ/` - Legacy comparison folders by sample numbers (e.g., `comparisons_474_499_505/`)
+- If samples belong to a defined series (e.g., AEM Substrate Series), use the series name instead of sample numbers: `AEMs/AEM_Substrate_Series/`
+
 ### Sample Organization
 Each sample has its own folder: `AEMs/sample_XXX/`
 
@@ -129,10 +136,8 @@ Within each sample folder, analysis results are stored in subfolders:
 - `R3_linear_XXX/` - R3 linear fit analysis
 - `tafel_700ma_XXX/` - Tafel analysis
 
-### Comparison Folders
-Cross-sample comparison graphs are stored in:
-- `AEMs/comparisons_XXX_YYY_ZZZ/` (e.g., `comparisons_474_499_505/`)
-- If samples belong to a defined series (e.g., AEM Substrate Series), use the series name instead of sample numbers: `AEMs/AEM_Substrate_Series/`
+### Scripts Folder
+All Python scripts are stored in `AEMs/scripts/` to keep the root clean.
 
 ---
 
