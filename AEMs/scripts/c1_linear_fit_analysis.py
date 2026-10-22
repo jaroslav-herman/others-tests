@@ -16,6 +16,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+# Disable interactive backend for faster rendering
+plt.ioff()
+
 # ============================================================================
 # CONFIGURATION - Following Tafel analysis pattern
 # ============================================================================
@@ -35,7 +38,7 @@ FIT_RANGE_END = 0.8    # End fit at 80% of in-range points
 OUTLIER_Z_SCORE = 2.5
 
 # Plot configuration
-PLOT_DPI = 300
+PLOT_DPI = 200
 PLOT_FORMAT = 'png'
 
 # ============================================================================
