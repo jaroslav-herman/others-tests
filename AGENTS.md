@@ -30,3 +30,9 @@
 - **For EIS CSV files from eisyFIT**: The `Time` column (capital T) represents the time evolution of fitted parameters. The `time/s` column (lowercase with /s) represents individual measurement timestamps. When a user requests "time evolution of parameters", plot against the `Time` column unless explicitly stated otherwise.
 
 - **Sample naming reference**: Use the Google Sheets file `electrolyzer_samples` (ID: `1ycoCdaol3zYWx8PDTvrI30eZV0nuC7ooFpEvz9qOlds`) as the primary source for sample names. To obtain a sample name: look up the `Sample Number` column and use the corresponding value from the `Sample Name` column. In comparison plots between samples, include legends with both the sample number and the sample name from the Google table (format: `sample_number (sample_name)`).
+
+---
+
+## Always True Commands
+
+- **Push to main branch**
