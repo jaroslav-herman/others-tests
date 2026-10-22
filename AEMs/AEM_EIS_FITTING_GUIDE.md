@@ -20,6 +20,16 @@ Use `AEMs/scripts/process_eis_data.py` as the primary workflow for:
 
 **Always push changes to main branch** after creating or modifying processing scripts.
 
+### Single Sample Processing Workflow
+When a specific sample and parameter are requested:
+1. **Identify the correct script** from `AEMs/scripts/` based on the parameter
+2. **Temporarily modify the SAMPLES list** in the script to include ONLY the requested sample
+3. **Run the script** - outputs will automatically be saved to `sample_{id}/{param_folder}/`
+4. **Revert the SAMPLES list** back to its original state
+5. **Push to main branch**
+
+All analysis scripts now save their outputs directly into the sample folder, so no manual moving is required.
+
 ---
 
 ## Dedicated Linear Fit Analysis
@@ -38,6 +48,13 @@ For new samples, work in the respective sample folder (`AEMs/sample_XXX/`). Crea
 3. Ensure all output folders are created inside the sample's directory
 4. Run `scripts/generate_polarization_graphs.py` to generate polarization curves and current evolution graphs for the new sample
 5. Push all changes to main branch
+
+---
+
+## Always True Commands
+
+1. **Push to main branch** - Always push changes to the main branch after processing
+2. **Process only specified samples** - When a specific sample is requested for processing, run scripts ONLY for that sample, not for all samples in the SAMPLES list. Temporarily modify the SAMPLES list in the script to include only the requested sample, run it, then revert the SAMPLES list back to its original state.
 
 ---
 

@@ -76,7 +76,7 @@ def analyze_r0_linear_sample(csv_path, sample_id,
     df = df.sort_values(['Time', 'I_mA'])
     
     # Create output directory
-    output_dir = Path(f"r0_linear_{sample_id}")
+    output_dir = Path(f"sample_{sample_id}/r0_linear_{sample_id}")
     output_dir.mkdir(exist_ok=True, parents=True)
     
     # Get unique Time points

@@ -74,7 +74,7 @@ def analyze_c1_linear_sample(csv_path, sample_id,
     df = df.sort_values(['Time', 'I_mA'])
     
     # Create output directory
-    output_dir = Path(f"c1_linear_{sample_id}")
+    output_dir = Path(f"sample_{sample_id}/c1_linear_{sample_id}")
     output_dir.mkdir(exist_ok=True, parents=True)
     
     # Get unique Time points

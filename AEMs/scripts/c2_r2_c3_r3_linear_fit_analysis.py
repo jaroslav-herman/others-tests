@@ -101,7 +101,7 @@ def analyze_parameter_linear_sample(csv_path, sample_id, param_name,
     df = df.sort_values(['Time', 'I_mA'])
     
     # Create output directory
-    output_dir = Path(f"{param_name}_linear_{sample_id}")
+    output_dir = Path(f"sample_{sample_id}/{param_name}_linear_{sample_id}")
     output_dir.mkdir(exist_ok=True, parents=True)
     
     # Get unique Time points
