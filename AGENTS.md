@@ -19,6 +19,8 @@
 
 - When creating or editing files (especially images), provide direct file paths in the response so users can instantly access them. Use markdown image syntax for PNG/JPG files: ![description](file:///absolute/path/to/file.png). For other file types, provide the absolute path as a clickable link.
 
+- When a user requests to show graphs, provide direct GitHub links to the graphs so they can open them immediately in a browser or GitHub app. Format: `https://github.com/jaroslav-herman/others-tests/blob/main/path/to/graph.png`. If many graphs were produced, provide links to the folders where they are saved (format: `https://github.com/jaroslav-herman/others-tests/tree/main/path/to/folder/`).
+
 - When providing file links in chat, use the absolute Windows path without file:/// protocol for best compatibility. Format: C:\Users\...\file.png. For images, also include markdown syntax: ![alt](C:\Users\...\file.png). Test links before finalizing response.
 
 - For creating polarization curve plots from SV technique data: use wepy.load_files() to discover .mpr files containing 'SV' in the filename, load them with wepy.read_file(), extract IV curves with wepy.IV_curves_data(data), use wepy.get_colors() for multi-series coloring, plot I/mA vs control/V (or Ecell/V), and save as PNG. Reference: plot_polarization_curve_443_MoS2.py in Summer projects/MoS2.
