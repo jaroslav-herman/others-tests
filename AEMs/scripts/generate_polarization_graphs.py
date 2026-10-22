@@ -15,10 +15,11 @@ from pathlib import Path
 SAMPLES = ['474', '498', '499', '505']
 
 # Target voltages for interpolation
-TARGET_VOLTAGES = [1.4, 1.5, 1.6, 1.7, 1.8, 1.9]
+TARGET_VOLTAGES = [1.4, 1.45, 1.5, 1.55, 1.6, 1.7, 1.8, 1.9]
 
-# Rainbow color scheme
-RAINBOW_COLORS = plt.cm.rainbow(np.linspace(0, 1, 28))  # 28 time points max
+# Rainbow color scheme from red to purple (violet)
+# Using Spectral colormap which goes from red through orange, yellow, green, blue to purple
+RAINBOW_COLORS = plt.cm.Spectral(np.linspace(0, 1, 28))  # 28 time points max
 
 def load_sample_data(sample_id):
     """Load sample data from CSV file."""

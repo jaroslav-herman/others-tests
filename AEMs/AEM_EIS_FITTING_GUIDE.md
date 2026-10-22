@@ -36,7 +36,8 @@ For new samples, work in the respective sample folder (`AEMs/sample_XXX/`). Crea
 1. Add the new sample ID to the `SAMPLES` list in each script
 2. Run the scripts
 3. Ensure all output folders are created inside the sample's directory
-4. Push all changes to main branch
+4. Run `scripts/generate_polarization_graphs.py` to generate polarization curves and current evolution graphs for the new sample
+5. Push all changes to main branch
 
 ---
 
