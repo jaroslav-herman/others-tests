@@ -206,6 +206,8 @@ When asked to show graphs, provide direct GitHub links:
 
 This allows users to open them immediately in a browser or GitHub app.
 
+**Always send GitHub links** when graphs are generated or requested.
+
 ---
 
 ## Script Configuration Details
