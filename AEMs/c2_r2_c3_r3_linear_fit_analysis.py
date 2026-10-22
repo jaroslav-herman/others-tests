@@ -41,8 +41,14 @@ PARAM_UNITS = {
 }
 
 # Current range for analysis (mA)
-CURRENT_MIN = 10  # Lower limit for fitting
-CURRENT_MAX = None  # No upper limit - use entire current range
+# For R2 and R3: use same limits as Tafel analysis (5-700 mA)
+# For C2 and C3: keep original limits (10 mA min, no max)
+PARAM_CURRENT_LIMITS = {
+    'C2': {'min': 10, 'max': None},
+    'R2': {'min': 5, 'max': 700},
+    'C3': {'min': 10, 'max': None},
+    'R3': {'min': 5, 'max': 700}
+}
 
 # Fit configuration
 FIT_RANGE_START = 0.2  # Start fit from 20% of in-range points
@@ -60,8 +66,8 @@ PLOT_FORMAT = 'png'
 # ============================================================================
 
 def analyze_parameter_linear_sample(csv_path, sample_id, param_name,
-                                   current_min=CURRENT_MIN,
-                                   current_max=CURRENT_MAX,
+                                   current_min=None,
+                                   current_max=None,
                                    fit_start=FIT_RANGE_START,
                                    fit_end=FIT_RANGE_END,
                                    outlier_z_score=OUTLIER_Z_SCORE):
@@ -472,10 +478,14 @@ def main():
         
         for param_name in PARAMETERS:
             try:
+                # Get parameter-specific current limits
+                limits = PARAM_CURRENT_LIMITS.get(param_name, {'min': 10, 'max': None})
                 results_df, comparison_df = analyze_parameter_linear_sample(
                     csv_path, 
                     sample_id,
-                    param_name
+                    param_name,
+                    current_min=limits['min'],
+                    current_max=limits['max']
                 )
                 if results_df is not None:
                     all_results[sample_id][param_name] = results_df
