@@ -23,7 +23,7 @@ from pathlib import Path
 # ============================================================================
 
 # Samples to analyze
-SAMPLES = ['474', '498', '499']
+SAMPLES = ['474', '498', '499', '505']
 
 # Parameters to analyze
 PARAMETERS = ['C2', 'R2', 'C3', 'R3']

@@ -21,7 +21,7 @@ from pathlib import Path
 # ============================================================================
 
 # Samples to analyze
-SAMPLES = ['474', '498', '499']
+SAMPLES = ['474', '498', '499', '505']
 
 # Current range for analysis (mA)
 CURRENT_MIN = 10
