@@ -82,7 +82,7 @@ def analyze_tafel_sample(csv_path, sample_id,
     df = df.sort_values(['Time', 'I_mA'])
     
     # Create output directory
-    output_dir = Path(f"tafel_{current_max}ma_{sample_id}")
+    output_dir = Path(f"sample_{sample_id}/tafel_{current_max}ma_{sample_id}")
     output_dir.mkdir(exist_ok=True, parents=True)
     
     # Get unique Time points
@@ -472,8 +472,8 @@ def main():
         print("\n" + summary_df.to_string(index=False))
         
         # Save combined summary
-        summary_df.to_csv('tafel_combined_summary.csv', index=False)
-        print(f"\nSaved combined summary: tafel_combined_summary.csv")
+        summary_df.to_csv('scripts/tafel_combined_summary.csv', index=False)
+        print(f"\nSaved combined summary: scripts/tafel_combined_summary.csv")
     
     print(f"\n{'='*60}")
     print("Analysis Complete!")
@@ -482,7 +482,6 @@ def main():
     print("1. Place CSV file from eisyFIT in AEMs/ folder")
     print("2. Add sample to the samples list in this script")
     print("3. Run: python tafel_analysis_all_samples.py")
-    print("\nFor procedure documentation, see: tafel_analysis_skill.md")
 
 
 if __name__ == '__main__':
