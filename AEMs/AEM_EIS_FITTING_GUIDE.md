@@ -171,7 +171,13 @@ This series compares EIS results when catalyst is deposited on different substra
 
 **Samples in this series**: 474, 499, 505
 
+**Important**: Sample 498 is NOT part of this series.
+
 This series is used for comparing how the substrate type affects electrochemical performance and EIS parameters.
+
+#### Legend Format Rule
+In comparison plots between samples, always use the format: `sample_number (sample_name)`
+Example: `474 (VI_Ni_on_Ni_PTL)`
 
 ---
 
