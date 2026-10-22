@@ -17,9 +17,9 @@ SAMPLES = ['474', '498', '499', '505']
 # Target voltages for interpolation
 TARGET_VOLTAGES = [1.4, 1.45, 1.5, 1.55, 1.6, 1.7, 1.8, 1.9]
 
-# Rainbow color scheme from red to purple (violet)
-# Using Spectral colormap which goes from red through orange, yellow, green, blue to purple
-RAINBOW_COLORS = plt.cm.Spectral(np.linspace(0, 1, 28))  # 28 time points max
+# Rainbow color scheme from purple to red
+# Colors will be generated dynamically based on number of items, from purple (0) to red (1)
+RAINBOW_COLORS = None  # Will be set dynamically per plot
 
 def load_sample_data(sample_id):
     """Load sample data from CSV file."""
@@ -39,8 +39,12 @@ def load_sample_data(sample_id):
     return df
 
 def generate_polarization_curve(df, sample_id, output_dir):
-    """Generate I/mA vs Ecell/V plot split by Time with rainbow colors."""
+    """Generate I/mA vs Ecell/V plot split by Time with rainbow colors from purple to red."""
     times = sorted(df['Time'].unique())
+    
+    # Generate rainbow colors from purple to red based on number of time points
+    n_colors = len(times)
+    colors = plt.cm.rainbow(np.linspace(1, 0, n_colors))  # 1=purple, 0=red
     
     fig, ax = plt.subplots(figsize=(12, 8))
     
@@ -48,10 +52,9 @@ def generate_polarization_curve(df, sample_id, output_dir):
         time_data = df[df['Time'] == t]
         time_data = time_data.sort_values('Ecell_V')
         
-        color_idx = i % len(RAINBOW_COLORS)
         ax.plot(time_data['Ecell_V'], time_data['I_mA'], 
                 marker='o', markersize=4, linestyle='-', 
-                color=RAINBOW_COLORS[color_idx], 
+                color=colors[i], 
                 label=f'Time {t}')
     
     ax.set_xlabel('Ecell / V', fontsize=14)
@@ -97,7 +100,7 @@ def interpolate_current_at_voltages(df, target_voltages):
     return pd.DataFrame(results)
 
 def generate_current_evolution_graph(df, sample_id, output_dir):
-    """Generate current evolution at specific voltages as function of Time."""
+    """Generate current evolution at specific voltages as function of Time with rainbow colors from purple to red."""
     # Interpolate currents at target voltages
     interp_df = interpolate_current_at_voltages(df, TARGET_VOLTAGES)
     
@@ -108,15 +111,18 @@ def generate_current_evolution_graph(df, sample_id, output_dir):
     # Pivot for plotting
     pivot_df = interp_df.pivot(index='Time', columns='Ecell_V', values='I_mA')
     
+    # Generate rainbow colors from purple to red based on number of voltages
+    n_voltages = len(TARGET_VOLTAGES)
+    colors = plt.cm.rainbow(np.linspace(1, 0, n_voltages))  # 1=purple, 0=red
+    
     fig, ax = plt.subplots(figsize=(12, 8))
     
     for i, v in enumerate(TARGET_VOLTAGES):
         if v in pivot_df.columns:
             voltage_data = pivot_df[v].dropna()
-            color_idx = i % len(RAINBOW_COLORS)
             ax.plot(voltage_data.index, voltage_data.values, 
                     marker='o', markersize=5, linestyle='-',
-                    color=RAINBOW_COLORS[color_idx],
+                    color=colors[i],
                     label=f'{v} V')
     
     ax.set_xlabel('Time', fontsize=14)
