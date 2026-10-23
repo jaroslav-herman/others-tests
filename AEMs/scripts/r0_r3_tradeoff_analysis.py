@@ -192,7 +192,9 @@ def main():
         ax.grid(alpha=0.3, axis='y')
 
     fig.savefig(output_dir / 'r0_r3_tradeoff_analysis.png', dpi=150)
+    fig.savefig(output_dir / 'r0_r3_tradeoff_analysis.svg')
     print(f"\nSaved: {output_dir / 'r0_r3_tradeoff_analysis.png'}")
+    print(f"Saved: {output_dir / 'r0_r3_tradeoff_analysis.svg'}")
     print(f"Saved: {output_dir / 'r0_r3_tradeoff_summary.csv'}")
 
 
