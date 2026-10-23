@@ -24,7 +24,7 @@ plt.ioff()
 SAMPLES = ['474', '498', '499', '505']
 
 # Target currents for interpolation (mA)
-TARGET_CURRENTS = [100, 200, 500]
+TARGET_CURRENTS = [50, 100, 200, 500, 1000]
 
 # Plot configuration
 PLOT_DPI = 200
