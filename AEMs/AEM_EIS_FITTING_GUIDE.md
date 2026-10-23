@@ -43,6 +43,7 @@ For new samples, work in the respective sample folder (`AEMs/sample_XXX/`). Crea
 4. **`scripts/tafel_analysis_all_samples.py`** - Tafel slope analysis
 5. **`scripts/plot_all_resistances.py`** - Plot all resistances (R0, R1, R2, R3) vs Current and vs Cell Voltage
 6. **`scripts/plot_r1_at_current.py`** - Plot Time evolution of R1 at specific currents (50, 100, 200, 500, 1000 mA)
+7. **`scripts/compare_r1_evolution_aem_substrate.py`** - Compare R1 Time evolution at specific currents for AEM Substrate Series (474, 499, 505)
 
 ### Setup for New Samples
 1. Add the new sample ID to the `SAMPLES` list in each script
