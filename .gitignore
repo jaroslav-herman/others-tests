@@ -1,4 +1,2 @@
-.ipython/*
-!.ipython/.gitkeep
-results/
-Used data for dataset/
+__pycache__/
+*.pyc
