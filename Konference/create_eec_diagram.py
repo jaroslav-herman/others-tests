@@ -263,7 +263,8 @@ def render_png(prims, path: str):
             _, x1, y1, x2, y2 = p
             plot([x1, x2], [y1, y2])
         elif p[0] == "poly":
-            plot([pt[0] for pt in p[1]], [pt[1] for pt in p[1]])
+            for a, b in zip(p[1], p[1][1:]):
+                plot([a[0], b[0]], [a[1], b[1]])
         elif p[0] == "rect":
             _, cx, cy, w, h = p
             ax.add_patch(Rectangle((cx - w / 2, cy - h / 2), w, h, fill=False, ec="black", lw=stroke))
