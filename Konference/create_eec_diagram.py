@@ -183,9 +183,11 @@ def layout(series) -> list[tuple]:
             for i, branch in enumerate(branches):
                 draw_branch(branch, x, x + w, ys[i], cols, label_below=(k > 1 and i == k - 1))
             if k > 1:
-                wire(x, x + w, Y0)
-                prims.append(("line", x, ys[0], x, ys[-1]))
-                prims.append(("line", x + w, ys[0], x + w, ys[-1]))
+                ymid = Y0
+                prims.append(("line", x, ys[0], x, ymid))
+                prims.append(("line", x, ymid, x, ys[-1]))
+                prims.append(("line", x + w, ys[0], x + w, ymid))
+                prims.append(("line", x + w, ymid, x + w, ys[-1]))
         prev_end = x + w
         x += w + GAP * s
     wire(prev_end, prev_end + 70, Y0)
