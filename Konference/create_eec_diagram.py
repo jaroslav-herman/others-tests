@@ -162,7 +162,7 @@ def layout(series) -> list[tuple]:
             label(cursor + w / 2, y, kind, num, below=label_below)
             prev_conn = r
             cursor += w + INTRAGAP * s
-        wire(prev_conn, x1 - GROUP_PAD * s, y)
+        wire(prev_conn, x1, y)
 
     x = MARGIN
     prev_end = MARGIN - 70
