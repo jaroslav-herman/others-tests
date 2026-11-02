@@ -19,8 +19,9 @@ Usage:
 Model syntax:
     series elements separated by "-", parallel groups in parentheses with
     branches separated by ",":
-        R0-L-(R1,CPE1)-(R2,CPE2)
-    elements: R<n>, L<n>, C<n>, CPE<n> (Q<n> accepted as CPE alias)
+        R0-L-(R1,Q1)-(R2,Q2)
+    elements: R<n>, L<n>, C<n>, Q<n> for CPE (CPE<n> also accepted; the
+    figure label is always "CPE")
 
 Outputs OUTPUT_PREFIX.svg and OUTPUT_PREFIX.png (default prefix:
 EEC_<sanitized model> next to this script). PNG export needs matplotlib.
@@ -85,22 +86,30 @@ def parse(toks: list[str], pos: int = 0):
             m = re.fullmatch(r"([A-Za-z]+)(\d*)", t)
             name = m.group(1).upper()
             if name == "Q":
-                name = "CPE"
+                name = "CPE"  # Q is the CPE element; the figure label stays "CPE"
             if name not in MATH_LETTER:
-                raise ValueError(f"Unknown element {t!r} (use R, L, C, CPE)")
+                raise ValueError(f"Unknown element {t!r} (use R, L, C, Q/CPE)")
             series.append(("leaf", name, m.group(2)))
             pos += 1
     return series, pos
 
 
-def branch_width(branch, s: float) -> float:
-    return sum(LEAF_W[k] * s for _, k, _ in branch) + INTRAGAP * s * max(0, len(branch) - 1)
+def group_columns(branches, s: float) -> list[float]:
+    """Column layout shared by all branches: element i of every branch gets the
+    same width (the max over branches), so elements align vertically."""
+    ncols = max(len(b) for b in branches)
+    cols = []
+    for c in range(ncols):
+        w = max((LEAF_W[b[c][1]] for b in branches if c < len(b)), default=0.0)
+        cols.append(w * s)
+    return cols
 
 
 def item_width(item, s: float) -> float:
     if item[0] == "leaf":
         return LEAF_W[item[1]] * s
-    return max(branch_width(b, s) for b in item[1]) + 2 * GROUP_PAD * s
+    cols = group_columns(item[1], s)
+    return sum(cols) + INTRAGAP * s * max(0, len(cols) - 1) + 2 * GROUP_PAD * s
 
 
 def layout(series) -> list[tuple]:
@@ -142,12 +151,13 @@ def layout(series) -> list[tuple]:
             prims.append(("poly", [(x0, cy - 40 * s), (x0 + 26 * s, cy), (x0, cy + 40 * s)]))
         return cx, cx + 18 * s
 
-    def draw_branch(branch, x0, x1, y, label_below):
+    def draw_branch(branch, x0, x1, y, cols, label_below):
         cursor = x0
         prev_conn = None
-        for _, kind, num in branch:
-            w = LEAF_W[kind] * s
-            l, r = draw_leaf(kind, cursor, y)
+        for c, (_, kind, num) in enumerate(branch):
+            w = cols[c]
+            left = cursor + (w - LEAF_W[kind] * s) / 2
+            l, r = draw_leaf(kind, left, y)
             wire(x0 if prev_conn is None else prev_conn, l, y)
             label(cursor + w / 2, y, kind, num, below=label_below)
             prev_conn = r
@@ -168,9 +178,10 @@ def layout(series) -> list[tuple]:
         else:
             branches = item[1]
             k = len(branches)
+            cols = group_columns(branches, s)
             ys = [Y0 + (i - (k - 1) / 2) * BRANCH_DY * s for i in range(k)]
             for i, branch in enumerate(branches):
-                draw_branch(branch, x, x + w, ys[i], label_below=(k > 1 and i == k - 1))
+                draw_branch(branch, x, x + w, ys[i], cols, label_below=(k > 1 and i == k - 1))
             if k > 1:
                 wire(x, x + w, Y0)
                 prims.append(("line", x, ys[0], x, ys[-1]))
@@ -277,7 +288,7 @@ def render_png(prims, path: str):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Create an EEC diagram as SVG and PNG.")
-    ap.add_argument("model", help='EEC model, e.g. "R0-L-(R1,CPE1)"')
+    ap.add_argument("model", help='EEC model, e.g. "R0-L-(R1,Q1)"')
     ap.add_argument("-o", "--out", default=None, help="output path prefix (default: EEC_<model> next to this script)")
     args = ap.parse_args()
 
