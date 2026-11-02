@@ -202,12 +202,71 @@ def layout(series) -> list[tuple]:
     return prims
 
 
-def render_svg(prims) -> str:
+PAD = 20.0
+
+
+def tighten(prims):
+    """Translate primitives so the drawing's bounding box (incl. labels and
+    stroke width) starts at PAD and return (prims, width, height)."""
+    xs, ys = [], []
+    stroke = next((p[1] for p in prims if p[0] == "stroke"), STROKE)
+    for p in prims:
+        if p[0] == "line":
+            xs += [p[1], p[3]]
+            ys += [p[2], p[4]]
+        elif p[0] == "poly":
+            xs += [pt[0] for pt in p[1]]
+            ys += [pt[1] for pt in p[1]]
+        elif p[0] == "rect":
+            xs += [p[1] - p[3] / 2, p[1] + p[3] / 2]
+            ys += [p[2] - p[4] / 2, p[2] + p[4] / 2]
+        elif p[0] == "arc":
+            xs += [p[1] - p[3], p[1] + p[3]]
+            ys += [p[2] - p[3], p[2]]
+        elif p[0] == "cap":
+            xs += [p[1] - p[4] / 2, p[1] + p[4] / 2]
+            ys += [p[2] - p[3] / 2, p[2] + p[3] / 2]
+        elif p[0] == "text":
+            fs = p[5]
+            xs += [p[1] - fs, p[1] + fs]
+            ys += [p[2] - fs, p[2] + fs * 0.35]
+    m = stroke / 2 + 2
+    x0, x1 = min(xs) - m, max(xs) + m
+    y0, y1 = min(ys) - m, max(ys) + m
+    dx, dy = PAD - x0, PAD - y0
+
+    def tx(v):
+        return v + dx
+
+    def ty(v):
+        return v + dy
+
+    out = []
+    for p in prims:
+        if p[0] == "line":
+            out.append(("line", tx(p[1]), ty(p[2]), tx(p[3]), ty(p[4])))
+        elif p[0] == "poly":
+            out.append(("poly", [(tx(x), ty(y)) for x, y in p[1]]))
+        elif p[0] == "rect":
+            out.append(("rect", tx(p[1]), ty(p[2]), p[3], p[4]))
+        elif p[0] == "arc":
+            out.append(("arc", tx(p[1]), ty(p[2]), p[3]))
+        elif p[0] == "cap":
+            out.append(("cap", tx(p[1]), ty(p[2]), p[3], p[4]))
+        elif p[0] == "text":
+            out.append(("text", tx(p[1]), ty(p[2]), p[3], p[4], p[5]))
+        else:
+            out.append(p)
+    w = x1 - x0 + 2 * PAD
+    h = y1 - y0 + 2 * PAD
+    return out, w, h
+
+
+def render_svg(prims, w, h) -> str:
     stroke = next((p[1] for p in prims if p[0] == "stroke"), STROKE)
     parts = [
-        f'<svg width="{W}" height="{H}" xmlns="http://www.w3.org/2000/svg" '
+        f'<svg width="{w:.1f}" height="{h:.1f}" xmlns="http://www.w3.org/2000/svg" '
         f'xmlns:xlink="http://www.w3.org/1999/xlink" overflow="hidden"><g>'
-        f'<rect x="0" y="0" width="{W}" height="{H}" fill="#FFFFFF"/>'
     ]
     style = f'stroke="#000000" stroke-width="{stroke}" stroke-miterlimit="8" fill="none" fill-rule="evenodd"'
     for p in prims:
@@ -249,7 +308,7 @@ def render_svg(prims) -> str:
     return "".join(parts)
 
 
-def render_png(prims, path: str):
+def render_png(prims, w, h, path: str):
     import matplotlib
 
     matplotlib.use("Agg")
@@ -258,10 +317,10 @@ def render_png(prims, path: str):
 
     plt.rcParams["mathtext.fontset"] = "cm"
     stroke = next((p[1] for p in prims if p[0] == "stroke"), STROKE)
-    fig = plt.figure(figsize=(W / 100, H / 100), dpi=100, facecolor="white")
+    fig = plt.figure(figsize=(w / 100, h / 100), dpi=100, facecolor="none")
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_xlim(0, W)
-    ax.set_ylim(H, 0)
+    ax.set_xlim(0, w)
+    ax.set_ylim(h, 0)
     ax.axis("off")
 
     def plot(xs, ys):
@@ -292,7 +351,7 @@ def render_png(prims, path: str):
             else:
                 txt = rf"${main}_{{{sub}}}$" if sub else rf"${main}$"
             ax.text(tx, ty, txt, fontsize=fs * 72 / 100, ha="center", va="baseline", color="black")
-    fig.savefig(path, dpi=100, facecolor="white")
+    fig.savefig(path, dpi=100, facecolor="none", transparent=True)
     plt.close(fig)
 
 
@@ -312,18 +371,18 @@ def main() -> int:
             if item[0] == "leaf" and item[1] == "R":
                 series[i] = ("leaf", item[1], "Ω")
                 break
-    prims = layout(series)
+    prims, w, h = tighten(layout(series))
 
     prefix = args.out or os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "EEC_" + re.sub(r"[^A-Za-z0-9]+", "_", args.model).strip("_")
     )
     svg_path = prefix + ".svg"
     with open(svg_path, "w", encoding="utf-8") as f:
-        f.write(render_svg(prims))
+        f.write(render_svg(prims, w, h))
     print(f"Wrote {svg_path}")
     png_path = prefix + ".png"
     try:
-        render_png(prims, png_path)
+        render_png(prims, w, h, png_path)
         print(f"Wrote {png_path}")
     except ImportError:
         print("matplotlib not installed; skipped PNG export (pip install matplotlib)", file=sys.stderr)
