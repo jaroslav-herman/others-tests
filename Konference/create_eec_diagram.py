@@ -148,7 +148,7 @@ def layout(series) -> list[tuple]:
             return cx - 14 * s, cx + 14 * s
         for i in range(2):
             x0 = cx - 26 * s + 18 * s * i
-            prims.append(("poly", [(x0, cy - 40 * s), (x0 + 26 * s, cy), (x0, cy + 40 * s)]))
+            prims.append(("poly", [(x0, cy - 26 * s), (x0 + 26 * s, cy), (x0, cy + 26 * s)]))
         return cx, cx + 18 * s
 
     def draw_branch(branch, x0, x1, y, cols, label_below):
