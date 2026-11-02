@@ -206,8 +206,10 @@ def render_svg(prims) -> str:
             _, x1, y1, x2, y2 = p
             parts.append(f'<path d="M{x1:.3f} {y1:.3f} {x2:.3f} {y2:.3f}" {style}/>')
         elif p[0] == "poly":
-            pts = " ".join(f"{x:.3f} {y:.3f}" for x, y in p[1])
-            parts.append(f'<path d="M{pts.replace(" ", " L", 1)}" {style}/>')
+            d = f"M{p[1][0][0]:.3f} {p[1][0][1]:.3f} " + " ".join(
+                f"L{x:.3f} {y:.3f}" for x, y in p[1][1:]
+            )
+            parts.append(f'<path d="{d}" {style}/>')
         elif p[0] == "rect":
             _, cx, cy, w, h = p
             parts.append(
