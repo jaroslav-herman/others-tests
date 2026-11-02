@@ -181,7 +181,14 @@ def layout(series) -> list[tuple]:
             cols = group_columns(branches, s)
             ys = [Y0 + (i - (k - 1) / 2) * BRANCH_DY * s for i in range(k)]
             for i, branch in enumerate(branches):
-                draw_branch(branch, x, x + w, ys[i], cols, label_below=(k > 1 and i == k - 1))
+                draw_branch(
+                    branch,
+                    x + GROUP_PAD * s,
+                    x + w - GROUP_PAD * s,
+                    ys[i],
+                    cols,
+                    label_below=(k > 1 and i == k - 1),
+                )
             if k > 1:
                 ymid = Y0
                 prims.append(("line", x, ys[0], x, ymid))
