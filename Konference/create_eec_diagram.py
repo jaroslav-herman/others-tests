@@ -128,7 +128,7 @@ def layout(series) -> list[tuple]:
             prims.append(("line", x1, y, x2, y))
 
     def label(x, y, name, num, below=False):
-        ty = y + 68 * s if below else y - 72 * s
+        ty = y + 78 * s if below else y - 62 * s
         prims.append(("text", x, ty, name, num, FONT * s))
 
     def draw_leaf(kind, left, cy):
@@ -156,7 +156,7 @@ def layout(series) -> list[tuple]:
         prev_conn = None
         for c, (_, kind, num) in enumerate(branch):
             w = cols[c]
-            left = cursor + (w - LEAF_W[kind] * s) / 2
+            left = cursor + (w - LEAF_W[kind] * s) / 2 + (22 * s if kind == "CPE" else 0.0)
             l, r = draw_leaf(kind, left, y)
             wire(x0 if prev_conn is None else prev_conn, l, y)
             label(cursor + w / 2, y, kind, num, below=label_below)
