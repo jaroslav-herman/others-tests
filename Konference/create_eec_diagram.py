@@ -128,7 +128,7 @@ def layout(series) -> list[tuple]:
             prims.append(("line", x1, y, x2, y))
 
     def label(x, y, name, num, below=False):
-        ty = y + 78 * s if below else y - 62 * s
+        ty = y + 44 * s if below else y - 36 * s
         prims.append(("text", x, ty, name, num, FONT * s))
 
     def draw_leaf(kind, left, cy):
