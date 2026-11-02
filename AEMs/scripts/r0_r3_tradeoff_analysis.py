@@ -23,13 +23,14 @@ from scipy import stats
 from pathlib import Path
 
 # AEM Substrate Series samples (474, 499, 505 only - NOT 498)
-SAMPLES = [474, 499, 505]
+SAMPLES = [474, 499, 505, 516]
 
 # Sample display names from Google Sheets
 SAMPLE_NAMES = {
     474: 'VI_Ni_on_Ni_PTL',
     499: 'VI_Ni_on_Ni_etched',
     505: 'VI_Ni_on_Ni_plain',
+    516: 'Ni PTL no sputtering',
 }
 
 # Rainbow colors for samples (purple to red)
@@ -37,6 +38,7 @@ SAMPLE_COLORS = {
     474: 'purple',
     499: 'blue',
     505: 'red',
+    516: 'green',
 }
 
 
@@ -110,9 +112,9 @@ def main():
 
     # ---------------------------------------------------------------- figure
     fig = plt.figure(figsize=(15, 13))
-    gs = fig.add_gridspec(3, 3, height_ratios=[1.15, 1, 0.85], hspace=0.45,
+    gs = fig.add_gridspec(3, 4, height_ratios=[1.15, 1, 0.85], hspace=0.45,
                           wspace=0.30, top=0.90, bottom=0.06, left=0.06, right=0.97)
-    fig.suptitle('R0/R3 Trade-off - AEM Substrate Series (474, 499, 505)',
+    fig.suptitle('R0/R3 Trade-off - AEM Substrate Series (474, 499, 505, 516)',
                  fontsize=17, fontweight='bold', y=0.965)
 
     # Panel A: R3 vs R0 scatter, iso-sum lines, per-sample medians

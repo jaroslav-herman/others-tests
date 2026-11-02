@@ -13,20 +13,23 @@ from pathlib import Path
 sample_names = {
     '474': 'VI_Ni_on_Ni_PTL',
     '499': 'V_Ni90nm(100)_on_etched_piperion',
-    '505': 'V_Ni90nm(100)_non-etched_piperion'
+    '505': 'V_Ni90nm(100)_non-etched_piperion',
+    '516': 'Ni PTL no sputtering'
 }
 
 # Colors and markers for each sample
 colors = {
     '474': 'blue',
     '499': 'orange',
-    '505': 'green'
+    '505': 'green',
+    '516': 'purple'
 }
 
 markers = {
     '474': 'o',
     '499': 's',
-    '505': '^'
+    '505': '^',
+    '516': 'D'
 }
 
 param_units = {
@@ -53,7 +56,8 @@ def create_comparison_graph(param_name, output_dir):
     samples = {
         '474': Path(f'../sample_474/{dir_prefix}_linear_474/474_{param_name}_fit_summary.csv'),
         '499': Path(f'../sample_499/{dir_prefix}_linear_499/499_{param_name}_fit_summary.csv'),
-        '505': Path(f'../sample_505/{dir_prefix}_linear_505/505_{param_name}_fit_summary.csv')
+        '505': Path(f'../sample_505/{dir_prefix}_linear_505/505_{param_name}_fit_summary.csv'),
+        '516': Path(f'../sample_516/{dir_prefix}_linear_516/516_{param_name}_fit_summary.csv')
     }
     
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -108,7 +112,8 @@ def create_combined_comparison_graph(output_dir):
         samples = {
             '474': Path(f'../sample_474/{dir_prefix}_linear_474/474_{param_name}_fit_summary.csv'),
             '499': Path(f'../sample_499/{dir_prefix}_linear_499/499_{param_name}_fit_summary.csv'),
-            '505': Path(f'../sample_505/{dir_prefix}_linear_505/505_{param_name}_fit_summary.csv')
+            '505': Path(f'../sample_505/{dir_prefix}_linear_505/505_{param_name}_fit_summary.csv'),
+            '516': Path(f'../sample_516/{dir_prefix}_linear_516/516_{param_name}_fit_summary.csv')
         }
         
         for sample_id, csv_path in samples.items():

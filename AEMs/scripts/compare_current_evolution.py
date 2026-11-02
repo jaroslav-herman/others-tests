@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # AEM Substrate Series samples (474, 499, 505 only - NOT 498)
-SAMPLES = ['474', '499', '505']
+SAMPLES = ['474', '499', '505', '516']
 
 # Target voltages for comparison (same as in generate_polarization_graphs.py)
 TARGET_VOLTAGES = [1.4, 1.45, 1.5, 1.55, 1.6, 1.7, 1.8, 1.9]
@@ -23,6 +23,7 @@ SAMPLE_NAMES = {
     '474': 'VI_Ni_on_Ni_PTL',
     '499': 'VI_Ni_on_Ni_etched',
     '505': 'VI_Ni_on_Ni_plain',
+    '516': 'Ni PTL no sputtering',
 }
 
 def load_sample_data(sample_id):

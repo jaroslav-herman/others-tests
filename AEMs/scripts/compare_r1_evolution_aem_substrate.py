@@ -22,13 +22,14 @@ plt.ioff()
 # ============================================================================
 
 # AEM Substrate Series samples (474, 499, 505 only - NOT 498)
-SAMPLES = ['474', '499', '505']
+SAMPLES = ['474', '499', '505', '516']
 
 # Sample display names from Google Sheets
 SAMPLE_NAMES = {
     '474': 'VI_Ni_on_Ni_PTL',
     '499': 'VI_Ni_on_Ni_etched',
     '505': 'VI_Ni_on_Ni_plain',
+    '516': 'Ni PTL no sputtering',
 }
 
 # Target currents for interpolation (mA)
@@ -42,7 +43,8 @@ PLOT_FORMAT = 'png'
 SAMPLE_COLORS = {
     '474': 'purple',
     '499': 'blue',
-    '505': 'red'
+    '505': 'red',
+    '516': 'green'
 }
 
 # ============================================================================
