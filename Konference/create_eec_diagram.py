@@ -300,12 +300,18 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Create an EEC diagram as SVG and PNG.")
     ap.add_argument("model", help='EEC model, e.g. "R0-L-(R1,Q1)"')
     ap.add_argument("-o", "--out", default=None, help="output path prefix (default: EEC_<model> next to this script)")
+    ap.add_argument("--ohm", action="store_true", help="label the first series resistor with the Ω subscript (R_Ω)")
     args = ap.parse_args()
 
     toks = tokenize(args.model)
     series, pos = parse(toks)
     if pos != len(toks) or not series:
         raise ValueError(f"Cannot parse model string: {args.model!r}")
+    if args.ohm:
+        for i, item in enumerate(series):
+            if item[0] == "leaf" and item[1] == "R":
+                series[i] = ("leaf", item[1], "Ω")
+                break
     prims = layout(series)
 
     prefix = args.out or os.path.join(
