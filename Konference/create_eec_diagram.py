@@ -152,7 +152,7 @@ def layout(series) -> list[tuple]:
         return cx, cx + 18 * s
 
     def draw_branch(branch, x0, x1, y, cols, label_below):
-        cursor = x0
+        cursor = x0 + GROUP_PAD * s
         prev_conn = None
         for c, (_, kind, num) in enumerate(branch):
             w = cols[c]
@@ -162,7 +162,7 @@ def layout(series) -> list[tuple]:
             label(cursor + w / 2, y, kind, num, below=label_below)
             prev_conn = r
             cursor += w + INTRAGAP * s
-        wire(prev_conn, x1, y)
+        wire(prev_conn, x1 - GROUP_PAD * s, y)
 
     x = MARGIN
     prev_end = MARGIN - 70
@@ -183,8 +183,8 @@ def layout(series) -> list[tuple]:
             for i, branch in enumerate(branches):
                 draw_branch(
                     branch,
-                    x + GROUP_PAD * s,
-                    x + w - GROUP_PAD * s,
+                    x,
+                    x + w,
                     ys[i],
                     cols,
                     label_below=(k > 1 and i == k - 1),
