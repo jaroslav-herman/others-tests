@@ -1,0 +1,81 @@
+{
+  "mpr": "C:\\Users\\Herman\\OneDrive - Univerzita Karlova\\PRBS\\VIII_Day9_PRBS_500mA_20mA_amp_C01.mpr",
+  "voltage_channel": "<Ewe>/V",
+  "current_channel": "I/mA",
+  "heating_frequency_Hz": 0.2510864549726859,
+  "heating_removed": false,
+  "bands": [
+    {
+      "nominal_dt_s": 0.00019999999494757503,
+      "n_samples": 191441,
+      "missing_grid_fraction": 0.42795032540683325,
+      "long_gap_count": 2486,
+      "median_long_gap_s": 0.011399999712011777,
+      "max_gap_s": 0.06439999837311916,
+      "band": "slow PRBS",
+      "first_ns": 1,
+      "last_ns": 196,
+      "epoch_s": 30.05059924085799,
+      "period_s": 5.149199869920267,
+      "retained_periods": 12,
+      "discarded_initial_periods": 1,
+      "phase_coverage": 0.9923871669385536,
+      "max_remaining_phase_interval_s": 0.00039999998989515007,
+      "step_repeat_jitter_s": 0.0,
+      "current_repeat_RMS_fraction": 0.0019243075961388285,
+      "voltage_repeat_residual_RMS_V": 0.00023620199354919518,
+      "accepted_frequencies": 21,
+      "rejected_frequencies": 123,
+      "leave_one_period_reconstructions": 12,
+      "averaged_voltage": true,
+      "excluded_postgap_averages": 2486
+    },
+    {
+      "nominal_dt_s": 0.00019999999494757503,
+      "n_samples": 96492,
+      "missing_grid_fraction": 0.4248143158597504,
+      "long_gap_count": 1253,
+      "median_long_gap_s": 0.011199999717064202,
+      "max_gap_s": 0.04679999881773256,
+      "band": "fast PRBS",
+      "first_ns": 197,
+      "last_ns": 708,
+      "epoch_s": 96.99019754982146,
+      "period_s": 4.194399894040544,
+      "retained_periods": 7,
+      "discarded_initial_periods": 1,
+      "phase_coverage": 0.9755864962807553,
+      "max_remaining_phase_interval_s": 0.00039999998989515007,
+      "step_repeat_jitter_s": 0.0,
+      "current_repeat_RMS_fraction": 0.0017421050859679804,
+      "voltage_repeat_residual_RMS_V": 0.00014333381295102325,
+      "accepted_frequencies": 252,
+      "rejected_frequencies": 0,
+      "leave_one_period_reconstructions": 7,
+      "averaged_voltage": true,
+      "excluded_postgap_averages": 1254
+    }
+  ],
+  "geis_comparison": [
+    {
+      "band": "fast PRBS",
+      "median_complex_error_pct": 6.667221585950713,
+      "phase_RMS_deg": 4.069792591543391,
+      "frequency_min_Hz": 20.02670277560999,
+      "frequency_max_Hz": 79.86839797415888
+    },
+    {
+      "band": "slow PRBS",
+      "median_complex_error_pct": 3.2554514895571915,
+      "phase_RMS_deg": 1.4292154717828025,
+      "frequency_min_Hz": 2.718869019200994,
+      "frequency_max_Hz": 29.90755921121093
+    }
+  ],
+  "limitations": [
+    "Conditional recovery assuming repeatable response across periods.",
+    "Residual systematic phase/gain error is not included in leave-one-period spread.",
+    "No GEIS-derived delay, gain, frequency warp or model was applied.",
+    "Recorded <Ewe> is averaged; aperture/channel transfer has not been calibrated."
+  ]
+}
