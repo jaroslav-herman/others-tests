@@ -9,9 +9,9 @@ from qrcode.image.svg import SvgImage
 OUTPUT_DIR = Path(__file__).resolve().parent
 #PNG_PATH = OUTPUT_DIR / "tr_peis_procedure_qr.png"
 #SVG_PATH = OUTPUT_DIR / "tr_peis_procedure_qr.svg"
-#EISYFIT_URL = "https://pypi.org/project/eisyfit/"
-#EISYFIT_PNG_PATH = OUTPUT_DIR / "eisyfit_qr.png"
-#EISYFIT_SVG_PATH = OUTPUT_DIR / "eisyfit_qr.svg"
+EISYFIT_URL = "github.com/jaroslav-herman/eisyFIT"
+EISYFIT_PNG_PATH = OUTPUT_DIR / "eisyfit_qr.png"
+EISYFIT_SVG_PATH = OUTPUT_DIR / "eisyfit_qr.svg"
 NANO_URL = "nano.mff.cuni.cz/"
 NANO_PNG_PATH = OUTPUT_DIR / "nano_qr.png"
 NANO_SVG_PATH = OUTPUT_DIR / "nano_qr.svg"
@@ -47,10 +47,10 @@ def save_qr(url: str, png_path: Path, svg_path: Path) -> None:
 
 def main() -> None:
     # save_qr(URL, PNG_PATH, SVG_PATH)
-    # save_qr(EISYFIT_URL, EISYFIT_PNG_PATH, EISYFIT_SVG_PATH)
-    save_qr(PRESENTATION_URL, PRESENTATION_PNG_PATH, PRESENTATION_SVG_PATH)
-    save_qr(NANO_URL, NANO_PNG_PATH, NANO_SVG_PATH)
-    save_qr(Pt_PAPER_URL,Pt_PAPER_PNG_PATH,Pt_PAPER_SVG_PATH)
+    save_qr(EISYFIT_URL, EISYFIT_PNG_PATH, EISYFIT_SVG_PATH)
+    #save_qr(PRESENTATION_URL, PRESENTATION_PNG_PATH, PRESENTATION_SVG_PATH)
+    #save_qr(NANO_URL, NANO_PNG_PATH, NANO_SVG_PATH)
+    #save_qr(Pt_PAPER_URL,Pt_PAPER_PNG_PATH,Pt_PAPER_SVG_PATH)
 
     # print(f"Created: {PNG_PATH}")
     # print(f"Created: {SVG_PATH}")

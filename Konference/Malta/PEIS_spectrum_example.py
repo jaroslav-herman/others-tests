@@ -27,7 +27,7 @@ plt.rcParams.update({
 })
 
 
-file = r"C:\Users\Herman\Python\WE\others-tests\Konference\Malta\Nyquist_AEM_example_data.csv"
+file = r"C:\Users\Herman\Python\WE\others-tests\Konference\Malta\Nyquist_AEM_example_data2.csv"
 
 # colors = ['orange','darkorange','red','darkred']
 
@@ -39,8 +39,8 @@ import pandas as pd
 data = pd.read_csv(file)
 active = data[data['Series'] == 'Included'].reset_index(drop=True)
 
-Zre = 1000 * active['Re(Z) / Ohm'][::2]
-Zim = 1000 * active['-Im(Z) / Ohm'][::2]
+Zre = 1000 * active['Re(Z) / Ohm']*4.84
+Zim = 1000 * active['-Im(Z) / Ohm']*4.84
 
 # Active points span log-spaced from 40 kHz (first point) down to 1 Hz (last point)
 freq = np.logspace(np.log10(40000), np.log10(1), len(Zre))
@@ -51,15 +51,15 @@ logf = np.log10(freq)
 vmin, vmax = logf.min(), logf.max()
 im = ax.scatter(x=Zre, y=Zim, marker='x', c=logf, cmap='rainbow', vmin=vmin, vmax=vmax)
 
-plt.xlabel(r'$Z_{\mathrm{Re}} ~ \mathrm{\left( m\Omega \right) }$',size=16)
-plt.ylabel(r'$-Z_{\mathrm{Im}} ~ \mathrm{\left( m\Omega \right) }$',size=16,labelpad = -5)
+plt.xlabel(r'$Z_{\mathrm{Re}} ~ \mathrm{\left( m\Omega ~cm^{2}\right) }$',size=16)
+plt.ylabel(r'$-Z_{\mathrm{Im}} ~ \mathrm{\left( m\Omega~cm^{2}\right) }$',size=16,labelpad = -5)
 
 plt.xticks(size=14)
 plt.yticks(size=14)
 plt.axhline(0, ls='--', c='black', lw=0.5)
 plt.axvline(0, ls='--', c='black', lw=0.5)
-plt.xlim(-10, 280)
-plt.ylim(-30, 120)
+plt.xlim(-50, 350*5)
+plt.ylim(-150, 750)
 plt.gca().set_aspect('equal')
 #plt.text(20,-20,"Ohmic \n resistance",size = 15)
 #plt.text(60,-25,"Inductive part",size = 15)
@@ -77,12 +77,12 @@ for label, color in zip(cbar.ax.get_xticklabels(), [ 'indigo','lime','red']):
 
 # Inset with the 20 highest-frequency points in more detail
 N_HF = 20
-hf = active.iloc[6:35][::2]
-hf_re = 1000 * hf['Re(Z) / Ohm']
-hf_im = 1000 * hf['-Im(Z) / Ohm']
-hf_freq = np.logspace(np.log10(40000), np.log10(1), len(active))[6:35][::2]
+hf = active.iloc[3:22]
+hf_re = 1000 * hf['Re(Z) / Ohm'] *4.84
+hf_im = 1000 * hf['-Im(Z) / Ohm']*4.84
+hf_freq = np.logspace(np.log10(40000), np.log10(1), len(active))[3:22]
 
-axins = ax.inset_axes([0.20, 0.22, 0.72, 0.60])
+axins = ax.inset_axes([0.18, 0.07, 0.8, 0.65])
 axins.scatter(x=hf_re, y=hf_im, marker='x', c=np.log10(hf_freq), cmap='rainbow', vmin=vmin, vmax=vmax)
 axins.axhline(0, ls='--', c='black', lw=0.5)
 axins.set_aspect('equal')
@@ -94,6 +94,6 @@ axins.set_yticks([])
 
 ax.indicate_inset_zoom(axins, edgecolor='black', alpha=0.6)
 
-plt.savefig(r'C:\Users\Herman\Python\WE\others-tests\Konference\Malta\PEIS_spectrum_example.png', dpi=1000, format='png', bbox_inches='tight')
+plt.savefig(r'C:\Users\Herman\Python\WE\others-tests\Konference\Malta\PEIS_spectrum_example2.png', dpi=1000, format='png', bbox_inches='tight')
 
 plt.show()
