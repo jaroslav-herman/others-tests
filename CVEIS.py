@@ -2,7 +2,7 @@ import numpy as np
 import wepy.basics as we
 import matplotlib.pyplot as plt
 
-file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\AEM-WE\522_VI_Ni_Bekaert_PTL_no_sputtering_EIS_tests\CV-EIS\CVEIS_1,1-1,6V_10mVs_f_corrected_triple_PEIS.txt"
+file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\AEM-WE\522_VI_Ni_Bekaert_PTL_no_sputtering_EIS_tests\CV-EIS\CVEIS_1,1-1,6V_10mVs_f_corrected_wet_cathode_PEIS.txt"
 data = we.read_file(file, skiprows=0)
 #print(data)
 groups = data.groupby('Tech')
