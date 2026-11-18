@@ -41,6 +41,7 @@ import time
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -58,6 +59,7 @@ MAX_BINS = 120
 FILL_TARGET = 0.95
 FIXED_BIN_WIDTHS = (0.025, 0.05)  # V, heatmaps always made with these resolutions
 NBR_COLS = 3  # neighboring energy columns averaged when the reference cell is empty
+SYMLOG_LINTHRESH = 10.0  # counts/s; below this the spectrum-subtracted map is linear
 NICE_STEPS = (1.0, 2.0, 2.5, 5.0)  # x 10^k
 DV_THRESHOLD = 1e-3  # V per sample below which the sweep direction is "flat"
 
@@ -192,16 +194,19 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
           f"cells filled {int(filled.sum())}/{matrix.size} ({filled.sum() / matrix.size:.0%}), "
           f"{nums[filled].mean():.1f} pts/filled cell (averaged)")
     cbar_label = "counts / s"
-    vmin = vmax = None
+    norm = None
     if subtract_spectrum:
         with np.errstate(invalid="ignore"):
             spectrum = np.nanmean(matrix, axis=0)
         matrix = matrix - spectrum[None, :]
         m = np.nanmax(np.abs(matrix))
-        vmin, vmax = -m, m
-        cbar_label = "counts/s - voltage-averaged spectrum"
+        # symmetric log: linear near 0, log beyond +/- SYMLOG_LINTHRESH, so
+        # small deviations stay visible and large outliers are compressed
+        norm = mcolors.SymLogNorm(linthresh=SYMLOG_LINTHRESH, vmin=-m, vmax=m)
+        cbar_label = ("counts/s - voltage-averaged spectrum (sym-log, "
+                      f"linthresh={SYMLOG_LINTHRESH:g})")
         print(f"[{note}] subtracted per-row the voltage-averaged spectrum "
-              f"(range ±{m:.1f})")
+              f"(range ±{m:.1f}, sym-log colorbar)")
     if normalize in ("min", "max"):
         ref, n_fallback = row_reference(matrix, normalize)
         ref_e = energies[0] if normalize == "min" else energies[-1]
@@ -218,7 +223,7 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
     fig, ax = plt.subplots(figsize=(9, 7))
     mesh = ax.pcolormesh(energy_edges(energies), y_edges,
                          np.ma.masked_invalid(matrix), shading="flat", cmap=cmap,
-                         vmin=vmin, vmax=vmax)
+                         norm=norm)
     ax.axhline(V_HI, color="white", lw=0.8, ls="--", alpha=0.7)
     ax.set_ylim(V_LO, 2 * V_HI - V_LO)
     ticks = np.arange(V_LO, 2 * V_HI - V_LO + 1e-9, 0.2)
