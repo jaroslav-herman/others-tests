@@ -18,18 +18,25 @@ to the output CSV:
     abs_time_utc, cv_time_s, voltage_Ewe_V, current_mA,
     binding_energy_eV, counts_s, error_bar, region, scan
 
-Output: 11_CV_XPS_correlated.csv next to the input files.
+Output: <mpt_basename>_XPS_correlated.csv next to the .mpt file
+(or the path given as the optional third CLI argument).
 """
 
 import csv
 import os
 import re
+import sys
 from bisect import bisect_left
 from datetime import datetime, timedelta, timezone
 
-MPT_FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV.mpt"
-XY_FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\CV_5mbar_Fixed_energy_50mVs_new_01.xy"
-OUT_FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV_XPS_correlated.csv"
+# Optional CLI overrides: python CVXPS-correlate.py [mpt] [xy] [out_csv]
+MPT_FILE = (sys.argv[1] if len(sys.argv) > 1 else
+            r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV.mpt")
+XY_FILE = (sys.argv[2] if len(sys.argv) > 2 else
+           r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\CV_5mbar_Fixed_energy_50mVs_new_01.xy")
+OUT_FILE = (sys.argv[3] if len(sys.argv) > 3 else os.path.join(
+    os.path.dirname(MPT_FILE),
+    os.path.splitext(os.path.basename(MPT_FILE))[0] + "_XPS_correlated.csv"))
 
 # .mpt timestamps are local time; .xy timestamps are UTC.
 # Local = UTC + UTC_OFFSET_HOURS (here CET, 1 hour ahead of UTC).
