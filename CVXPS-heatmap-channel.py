@@ -45,14 +45,15 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Optional CLI overrides: python CVXPS-heatmap-correlated.py [csv] [png]
+# Optional CLI overrides: python CVXPS-heatmap-channel.py [csv] [png] [tag]
 CORRELATED_CSV = (sys.argv[1] if len(sys.argv) > 1 else
                   r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\12_CV_XPS_correlated.csv")
 PLOT_FILE = (sys.argv[2] if len(sys.argv) > 2 else os.path.join(
     os.path.dirname(CORRELATED_CSV),
     os.path.splitext(os.path.basename(CORRELATED_CSV))[0] + "_heatmap.png"))
 # channel-filtered outputs get a tag so they do not overwrite full-data plots
-PLOT_FILE = PLOT_FILE.replace("_heatmap.png", "_heatmap_ch50-80.png")
+TAG = sys.argv[3] if len(sys.argv) > 3 else "ch50-80"
+PLOT_FILE = PLOT_FILE.replace("_heatmap.png", f"_heatmap_{TAG}.png")
 
 V_LO = 0.6   # CV lower vertex (E2)
 V_HI = 1.8   # CV upper vertex (E1)

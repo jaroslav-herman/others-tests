@@ -32,7 +32,7 @@ import sys
 from bisect import bisect_left
 from datetime import datetime, timedelta, timezone
 
-# Optional CLI overrides: python CVXPS-correlate.py [mpt] [xy] [out_csv]
+# Optional CLI overrides: python CVXPS-correlate-channel.py [mpt] [xy] [out_csv] [ch_min] [ch_max]
 MPT_FILE = (sys.argv[1] if len(sys.argv) > 1 else
             r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV.mpt")
 XY_FILE = (sys.argv[2] if len(sys.argv) > 2 else
@@ -47,8 +47,8 @@ UTC_OFFSET_HOURS = 1.0
 
 # Channel-split .xy files carry "# Cycle: ..., Scan: N, Channel: C"; keep only
 # scans whose channel lies in [CH_MIN, CH_MAX].
-CH_MIN = 50
-CH_MAX = 80
+CH_MIN = int(sys.argv[4]) if len(sys.argv) > 4 else 50
+CH_MAX = int(sys.argv[5]) if len(sys.argv) > 5 else 80
 
 UTC = timezone.utc
 
