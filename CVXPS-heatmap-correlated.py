@@ -1,22 +1,26 @@
 """
-Heatmap of the correlated CV+XPS data (11_CV_XPS_correlated.csv, produced by
+Heatmap of correlated CV+XPS data (e.g. 12_CV_XPS_correlated.csv, produced by
 CVXPS-correlate.py).
 
 x-axis : binding energy (eV)
-y-axis : electrode potential Ewe (V) -- the CV swept from the lower to the
-         upper potential and back, so the y-axis covers the full excursion
-fill   : counts/s, averaged over all points falling into the same
-         (voltage bin, binding energy) cell
+y-axis : electrode potential Ewe (V), folded so that the up-sweep and the
+         down-sweep are separated: rising potential occupies y = 0.6 -> 1.8,
+         falling potential continues above it as y = 1.8 -> 3.0 (labelled
+         1.8 -> 0.6 again). Tick labels always show the actual potential.
+fill   : counts/s, averaged over all points in the same (y bin, energy) cell
 
-Voltage bins on the y-axis are chosen automatically: the target number of
-bins follows the square-root rule (clamped to [MIN_BINS, MAX_BINS]), and the
-bin width is rounded to a "nice" value (1/2/2.5/5 x 10^k V).
+Y bins are checked, not guessed: all "nice" widths (1/2/2.5/5 x 10^k) whose
+bin count lies in [MIN_BINS, MAX_BINS] are evaluated (fill ratio, points per
+cell), and the finest width that still fills >= FILL_TARGET of the cells is
+chosen.
 
-Output: 11_CV_XPS_heatmap.png next to the CSV.
+Usage: python CVXPS-heatmap-correlated.py [correlated_csv] [out_png]
+Output: <csv_basename>_heatmap.png next to the CSV.
 """
 
 import csv
 import os
+import sys
 
 import matplotlib
 
@@ -24,101 +28,137 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-CORRELATED_CSV = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV_XPS_correlated.csv"
-PLOT_FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\11_CV_XPS_heatmap.png"
+# Optional CLI overrides: python CVXPS-heatmap-correlated.py [csv] [png]
+CORRELATED_CSV = (sys.argv[1] if len(sys.argv) > 1 else
+                  r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\12_CV_XPS_correlated.csv")
+PLOT_FILE = (sys.argv[2] if len(sys.argv) > 2 else os.path.join(
+    os.path.dirname(CORRELATED_CSV),
+    os.path.splitext(os.path.basename(CORRELATED_CSV))[0] + "_heatmap.png"))
 
+V_LO = 0.6   # CV lower vertex (E2)
+V_HI = 1.8   # CV upper vertex (E1)
 MIN_BINS = 20
 MAX_BINS = 120
+FILL_TARGET = 0.95
 NICE_STEPS = (1.0, 2.0, 2.5, 5.0)  # x 10^k
-
-
-def nice_bin_width(raw_width):
-    """Round a raw bin width to the closest nice value (1/2/2.5/5 x 10^k)."""
-    exponent = np.floor(np.log10(raw_width))
-    best, best_dist = None, np.inf
-    for k in (exponent - 1, exponent, exponent + 1):
-        for step in NICE_STEPS:
-            w = step * 10.0**k
-            dist = abs(np.log10(w / raw_width))
-            if dist < best_dist:
-                best, best_dist = w, dist
-    return best
-
-
-def choose_voltage_bins(voltage):
-    """Pick bin width via square-root rule + nice rounding; return edges."""
-    n = voltage.size
-    target = int(np.clip(np.sqrt(n), MIN_BINS, MAX_BINS))
-    raw = (voltage.max() - voltage.min()) / target
-    width = nice_bin_width(max(raw, 1e-12))
-    start = np.floor(voltage.min() / width) * width
-    edges = np.arange(start, voltage.max() + width, width)
-    return edges, width
+DV_THRESHOLD = 1e-3  # V per sample below which the sweep direction is "flat"
 
 
 def load_correlated(path):
-    energy, volt, counts = [], [], []
+    t, volt, energy, counts = [], [], [], []
     with open(path, "r", encoding="utf-8", newline="") as f:
         reader = csv.reader(row for row in f if not row.startswith("#"))
         header = next(reader)
-        i_e, i_v, i_c = (header.index(c) for c in
-                         ("binding_energy_eV", "voltage_Ewe_V", "counts_s"))
+        i_t, i_v, i_e, i_c = (header.index(c) for c in
+                              ("cv_time_s", "voltage_Ewe_V",
+                               "binding_energy_eV", "counts_s"))
         for row in reader:
-            energy.append(float(row[i_e]))
+            t.append(float(row[i_t]))
             volt.append(float(row[i_v]))
+            energy.append(float(row[i_e]))
             counts.append(float(row[i_c]))
-    return (np.asarray(energy), np.asarray(volt), np.asarray(counts))
+    return (np.asarray(t), np.asarray(volt), np.asarray(energy),
+            np.asarray(counts))
 
 
-def bin_average(energy, volt, counts, v_edges):
-    """Mean counts/s per (voltage bin, energy) cell. Returns (energies,
-    energy_edges, matrix) with matrix shape (n_v_bins, n_energies), NaN where
-    a cell has no data."""
-    energies = np.unique(energy)
-    if energies.size == 1:
-        e_edges = np.array([energies[0] - 0.5, energies[0] + 0.5])
-    else:
-        mid = (energies[:-1] + energies[1:]) / 2
-        e_edges = np.concatenate(([energies[0] - (mid[0] - energies[0])], mid,
-                                  [energies[-1] + (energies[-1] - mid[-1])]))
-    e_idx = np.searchsorted(energies, energy)
-    v_idx = np.clip(np.searchsorted(v_edges, volt, side="right") - 1,
-                    0, len(v_edges) - 2)
-    n_v, n_e = len(v_edges) - 1, len(energies)
-    total = np.full((n_v, n_e), np.nan)
-    sums = np.zeros((n_v, n_e))
-    nums = np.zeros((n_v, n_e))
-    np.add.at(sums, (v_idx, e_idx), counts)
-    np.add.at(nums, (v_idx, e_idx), 1.0)
+def folded_y(t, volt):
+    """Fold potential into a monotonic-in-sweep y axis: up-sweep -> y = V,
+    down-sweep -> y = 2*V_HI - V (so y runs 0.6..1.8 up, then 1.8..3.0 down).
+    Returns y and the per-row direction (+1 up, -1 down)."""
+    ut, first = np.unique(t, return_index=True)
+    uv = volt[first]
+    grad = np.gradient(uv, ut)
+    direction_u = np.where(grad > DV_THRESHOLD, 1,
+                           np.where(grad < -DV_THRESHOLD, -1, 1))
+    direction = direction_u[np.searchsorted(ut, t)]
+    y = np.where(direction > 0, volt, 2 * V_HI - volt)
+    return y, direction
+
+
+def bin_cells(y, energy, counts, edges):
+    e_idx = np.searchsorted(np.unique(energy), energy)
+    y_idx = np.clip(np.searchsorted(edges, y, side="right") - 1,
+                    0, len(edges) - 2)
+    n_y, n_e = len(edges) - 1, len(np.unique(energy))
+    sums = np.zeros((n_y, n_e))
+    nums = np.zeros((n_y, n_e))
+    np.add.at(sums, (y_idx, e_idx), counts)
+    np.add.at(nums, (y_idx, e_idx), 1.0)
     filled = nums > 0
-    total[filled] = sums[filled] / nums[filled]
-    return energies, e_edges, total, nums
+    mean = np.full((n_y, n_e), np.nan)
+    mean[filled] = sums[filled] / nums[filled]
+    return mean, nums
+
+
+def choose_y_bins(y, energy, counts):
+    """Evaluate nice bin widths; pick the finest with fill >= FILL_TARGET."""
+    lo, hi = y.min(), y.max()
+    candidates = sorted({s * 10.0**k for k in range(-3, 1) for s in NICE_STEPS})
+    table = []
+    for w in candidates:
+        edges = np.arange(np.floor(lo / w) * w, hi + w, w)
+        n_bins = len(edges) - 1
+        if not (MIN_BINS <= n_bins <= MAX_BINS):
+            continue
+        _, nums = bin_cells(y, energy, counts, edges)
+        filled = nums > 0
+        fill = filled.sum() / nums.size
+        avg = nums[filled].mean() if filled.any() else 0.0
+        table.append((w, n_bins, fill, avg, int(nums.max())))
+    print(" y-bin check (width V | bins | fill | pts/filled cell | max):")
+    for w, n_bins, fill, avg, mx in table:
+        print(f"   {w:g} | {n_bins} | {fill:.0%} | {avg:.1f} | {mx}")
+    ok = [r for r in table if r[2] >= FILL_TARGET]
+    chosen = min(ok, key=lambda r: r[0]) if ok else max(table, key=lambda r: r[2])
+    w = chosen[0]
+    edges = np.arange(np.floor(lo / w) * w, hi + w, w)
+    print(f"chosen: width {w:g} V -> {len(edges) - 1} bins "
+          f"(fill {chosen[2]:.0%}, {chosen[3]:.1f} pts/filled cell)")
+    return edges
+
+
+def energy_edges(energies):
+    if energies.size == 1:
+        return np.array([energies[0] - 0.5, energies[0] + 0.5])
+    mid = (energies[:-1] + energies[1:]) / 2
+    return np.concatenate(([energies[0] - (mid[0] - energies[0])], mid,
+                           [energies[-1] + (energies[-1] - mid[-1])]))
 
 
 def main():
-    energy, volt, counts = load_correlated(CORRELATED_CSV)
-    print(f"Loaded {counts.size} correlated points from {CORRELATED_CSV}")
-    print(f"Voltage range: {volt.min():.3f} .. {volt.max():.3f} V "
-          f"(CV swept lower -> upper -> lower)")
+    t, volt, energy, counts = load_correlated(CORRELATED_CSV)
+    energies = np.unique(energy)
+    y, direction = folded_y(t, volt)
+    print(f"Loaded {counts.size} points from {CORRELATED_CSV}")
+    print(f"Potential {volt.min():.3f}..{volt.max():.3f} V; "
+          f"up-sweep points: {int((direction > 0).sum())}, "
+          f"down-sweep: {int((direction < 0).sum())}")
+    print(f"Folded y axis: {y.min():.3f} .. {y.max():.3f} "
+          f"(labels {V_LO}->{V_HI} up, {V_HI}->{V_LO} down)")
+    print(f"X: {energies.size} binding energies "
+          f"({energies.min():g}..{energies.max():g} eV)")
 
-    v_edges, width = choose_voltage_bins(volt)
-    print(f"Y bins: width {width:g} V -> {len(v_edges) - 1} bins")
-
-    energies, e_edges, matrix, nums = bin_average(energy, volt, counts, v_edges)
-    print(f"X: {energies.size} binding energies ({energies.min():g}..{energies.max():g} eV)")
-    print(f"Cells filled: {int((nums > 0).sum())}/{matrix.size}, "
-          f"max points per cell: {int(nums.max())} (averaged)")
+    y_edges = choose_y_bins(y, energy, counts)
+    matrix, nums = bin_cells(y, energy, counts, y_edges)
+    print(f"cells filled: {int((nums > 0).sum())}/{matrix.size}")
 
     cmap = plt.get_cmap("magma").copy()
     cmap.set_bad("lightgray")
-    fig, ax = plt.subplots(figsize=(9, 6))
-    mesh = ax.pcolormesh(e_edges, v_edges, np.ma.masked_invalid(matrix),
-                         shading="flat", cmap=cmap)
+    fig, ax = plt.subplots(figsize=(9, 7))
+    mesh = ax.pcolormesh(energy_edges(energies), y_edges,
+                         np.ma.masked_invalid(matrix), shading="flat", cmap=cmap)
+    ax.axhline(V_HI, color="white", lw=0.8, ls="--", alpha=0.7)
+    ax.set_ylim(V_LO, 2 * V_HI - V_LO)
+    ticks = np.arange(V_LO, 2 * V_HI - V_LO + 1e-9, 0.2)
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([f"{v:.1f}" if v <= V_HI + 1e-9 else f"{2 * V_HI - v:.1f}"
+                        for v in ticks])
     ax.set_xlabel("Binding energy (eV)")
-    ax.set_ylabel("Potential Ewe (V)")
-    ax.set_title("Ir 4f counts/s vs binding energy and potential "
-                 "(CV lower->upper->lower, cell-averaged)")
+    ax.set_ylabel("Potential Ewe (V)  (up-sweep, then down-sweep)")
+    ax.set_title("Ir 4f counts/s vs binding energy and potential (cell-averaged)")
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
+    ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
+    ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
     fig.colorbar(mesh, ax=ax, label="counts / s")
     fig.tight_layout()
     fig.savefig(PLOT_FILE, dpi=150)
