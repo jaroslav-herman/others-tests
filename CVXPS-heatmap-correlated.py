@@ -18,11 +18,15 @@ normalized either to the value of the highest binding energy column or to the
 lowest one (if that cell is empty, the neighboring energy cells of the row
 are averaged instead).
 
+plus a spectrum plot where counts/s are averaged over all voltage bins
+(<csv_basename>_spectrum_voltage_avg.png).
+
 Usage: python CVXPS-heatmap-correlated.py [correlated_csv] [out_png]
 Output: <csv_basename>_heatmap.png (auto bins),
         <csv_basename>_heatmap_<width>V.png (each fixed width),
         <csv_basename>_heatmap_norm_maxBE.png / _norm_minBE.png
         (auto bins, row-normalized to highest / lowest binding energy),
+        <csv_basename>_spectrum_voltage_avg.png (voltage-averaged spectrum),
         all next to the CSV.
 """
 
@@ -136,6 +140,19 @@ def energy_edges(energies):
                            [energies[-1] + (energies[-1] - mid[-1])]))
 
 
+def save_fig(fig, out_file):
+    for attempt in range(3):  # OneDrive occasionally locks the file briefly
+        try:
+            fig.savefig(out_file, dpi=150)
+            break
+        except OSError:
+            if attempt == 2:
+                raise
+            time.sleep(2)
+    plt.close(fig)
+    print(f"Saved plot to {out_file}")
+
+
 def row_reference(matrix, side):
     """Per-row reference = value of the highest ('max', last column) or lowest
     ('min', first column) binding energy column; if that cell is empty,
@@ -197,16 +214,28 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
     ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
     fig.colorbar(mesh, ax=ax, label=cbar_label)
     fig.tight_layout()
-    for attempt in range(3):  # OneDrive occasionally locks the file briefly
-        try:
-            fig.savefig(out_file, dpi=150)
-            break
-        except OSError:
-            if attempt == 2:
-                raise
-            time.sleep(2)
-    plt.close(fig)
-    print(f"Saved heatmap to {out_file}")
+    save_fig(fig, out_file)
+
+
+def plot_spectrum(energies, matrix, out_file):
+    """counts/s vs binding energy, averaged over all voltage bins (rows)."""
+    with np.errstate(invalid="ignore"):
+        mean = np.nanmean(matrix, axis=0)
+        std = np.nanstd(matrix, axis=0)
+    n = np.sum(np.isfinite(matrix), axis=0)
+    fig, ax = plt.subplots(figsize=(9, 6))
+    ax.plot(energies, mean, "-o", ms=4, color="black", label="mean over voltage bins")
+    ax.fill_between(energies, mean - std, mean + std, alpha=0.3,
+                    label="±1 std across voltage bins")
+    ax.set_xlabel("Binding energy (eV)")
+    ax.set_ylabel("counts / s")
+    ax.set_title("Ir 4f spectrum averaged over potential "
+                 f"({int(n.min())}-{int(n.max())} voltage bins per energy)")
+    ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
+    ax.legend()
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    save_fig(fig, out_file)
 
 
 def main():
@@ -239,6 +268,11 @@ def main():
         plot_heatmap(y, energy, counts, y_edges, norm_png,
                      f"auto {np.diff(y_edges).mean():g} V bins, row-normalized to {tag}",
                      normalize=side)
+
+    # 4) spectrum averaged over voltage bins (auto binning matrix, mean over rows)
+    matrix, _ = bin_cells(y, energy, counts, y_edges)
+    plot_spectrum(np.unique(energy), matrix,
+                  PLOT_FILE.replace(".png", "_spectrum_voltage_avg.png"))
 
 
 if __name__ == "__main__":
