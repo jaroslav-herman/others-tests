@@ -3,8 +3,8 @@ Parse a SpecsLab Prodigy XY export (fixed-energy XPS series),
 split it into regions by '# Region:' header (e.g. 'O1s 533.2'),
 and save each region into its own file named after its binding energy.
 
-Each output file contains two data columns:
-    counts/s    ErrorBar
+Each output file contains three data columns:
+    Time    counts/s    ErrorBar
 (one row per scan, 100 scans per region).
 
 Output files: O1s_529.0.dat, O1s_529.3.dat, ... in ./regions/
@@ -19,19 +19,27 @@ OUT_DIR = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS/CV_5mbar_Fixed_e
 def parse_file(filename):
     regions = {}
     current = None
-    acquisition_time = None
+    scan_timestamp = None
+    in_scan = False
     with open(filename, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.strip()
 
-            # Acquisition metadata: export the clock time, but not the date
+            # Each scan in the export has its own acquisition timestamp.
+            m = re.match(r"#\s*Cycle:\s*\d+\s*,\s*Curve:\s*\d+\s*,\s*Scan:\s*\d+\s*$", line)
+            if m:
+                in_scan = True
+                scan_timestamp = None
+                continue
+
+            # Record only the time from an in-scan Acquisition Date line.
             m = re.match(
                 r"#\s*Acquisition Date:\s*\d{4}-\d{2}-\d{2}\s+"
                 r"(\d{2}:\d{2}:\d{2})(?:\s+(UTC))?\s*$",
                 line,
             )
-            if m:
-                acquisition_time = f"{m.group(1)}" + (
+            if m and in_scan:
+                scan_timestamp = f"{m.group(1)}" + (
                     f" {m.group(2)}" if m.group(2) else ""
                 )
                 continue
@@ -40,7 +48,9 @@ def parse_file(filename):
             m = re.match(r"#\s*Region:\s*(.+?)\s*$", line)
             if m:
                 current = m.group(1)
-                regions[current] = {"index": [], "counts": [], "error": []}
+                regions[current] = {"index": [], "timestamp": [], "counts": [], "error": []}
+                in_scan = False
+                scan_timestamp = None
                 continue
 
             # Numeric data row: index  counts/s  ErrorBar
@@ -48,12 +58,13 @@ def parse_file(filename):
             if m and current is not None:
                 idx, cps, err = (float(x) for x in m.groups())
                 regions[current]["index"].append(idx)
+                regions[current]["timestamp"].append(scan_timestamp)
                 regions[current]["counts"].append(cps)
                 regions[current]["error"].append(err)
-    return regions, acquisition_time
+    return regions
 
 
-def save_regions(regions, acquisition_time, out_dir):
+def save_regions(regions, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     for name, d in regions.items():
         # Extract 'O1s' and the energy from the region name
@@ -66,16 +77,14 @@ def save_regions(regions, acquisition_time, out_dir):
         with open(path, "w", encoding="utf-8") as f:
             f.write(f"# Region: {name}\n")
             f.write(f"# Binding Energy: {energy} eV\n")
-            if acquisition_time:
-                f.write(f"# Acquisition Time: {acquisition_time}\n")
             f.write(f"# N scans: {len(d['counts'])}\n")
-            f.write("# counts/s\tErrorBar\n")
-            for cps, err in zip(d["counts"], d["error"]):
-                f.write(f"{cps}\t{err}\n")
+            f.write("# Time\tcounts/s\tErrorBar\n")
+            for timestamp, cps, err in zip(d["timestamp"], d["counts"], d["error"]):
+                f.write(f"{timestamp or ''}\t{cps}\t{err}\n")
         print(f"wrote {path}  ({len(d['counts'])} rows)")
 
 
 if __name__ == "__main__":
-    regions, acquisition_time = parse_file(FILE)
+    regions = parse_file(FILE)
     print(f"Found {len(regions)} regions\n")
-    save_regions(regions, acquisition_time, OUT_DIR)
+    save_regions(regions, OUT_DIR)
