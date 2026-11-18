@@ -13,11 +13,15 @@ Y bins are checked, not guessed: all "nice" widths (1/2/2.5/5 x 10^k) whose
 bin count lies in [MIN_BINS, MAX_BINS] are evaluated (fill ratio, points per
 cell), and the finest width that still fills >= FILL_TARGET of the cells is
 chosen. In addition, a second heatmap with the fixed width FIXED_BIN_WIDTH is
-always produced.
+always produced, and a third one with the auto (optimal) bins where each row
+is normalized to the value of the highest binding energy column (if that cell
+is empty, the neighboring energy cells of the row are averaged instead).
 
 Usage: python CVXPS-heatmap-correlated.py [correlated_csv] [out_png]
-Output: <csv_basename>_heatmap.png (auto bins) and
-        <csv_basename>_heatmap_<width>V.png (fixed bins) next to the CSV.
+Output: <csv_basename>_heatmap.png (auto bins),
+        <csv_basename>_heatmap_<width>V.png (fixed bins),
+        <csv_basename>_heatmap_norm.png (auto bins, row-normalized),
+        all next to the CSV.
 """
 
 import csv
@@ -43,6 +47,7 @@ MIN_BINS = 20
 MAX_BINS = 120
 FILL_TARGET = 0.95
 FIXED_BIN_WIDTH = 0.025  # V, second heatmap is always made with this resolution
+NBR_COLS = 3  # neighboring energy columns averaged when the max-BE cell is empty
 NICE_STEPS = (1.0, 2.0, 2.5, 5.0)  # x 10^k
 DV_THRESHOLD = 1e-3  # V per sample below which the sweep direction is "flat"
 
@@ -128,13 +133,42 @@ def energy_edges(energies):
                            [energies[-1] + (energies[-1] - mid[-1])]))
 
 
-def plot_heatmap(y, energy, counts, y_edges, out_file, note):
+def row_reference(matrix):
+    """Per-row reference = value of the highest binding energy column (last
+    column); if that cell is empty, average the neighboring energy columns;
+    if those are all empty too, fall back to the row mean."""
+    ref = matrix[:, -1].astype(float).copy()
+    n_fallback = 0
+    for i in range(matrix.shape[0]):
+        if not np.isfinite(ref[i]):
+            nbrs = matrix[i, -NBR_COLS:]
+            fin = nbrs[np.isfinite(nbrs)]
+            if fin.size:
+                ref[i] = fin.mean()
+            else:
+                row = matrix[i][np.isfinite(matrix[i])]
+                ref[i] = row.mean() if row.size else np.nan
+            n_fallback += 1
+    return ref, n_fallback
+
+
+def plot_heatmap(y, energy, counts, y_edges, out_file, note,
+                 normalize=False):
     energies = np.unique(energy)
     matrix, nums = bin_cells(y, energy, counts, y_edges)
     filled = nums > 0
     print(f"[{note}] bins={len(y_edges) - 1}, width={np.diff(y_edges).mean():g} V, "
           f"cells filled {int(filled.sum())}/{matrix.size} ({filled.sum() / matrix.size:.0%}), "
           f"{nums[filled].mean():.1f} pts/filled cell (averaged)")
+    cbar_label = "counts / s"
+    if normalize:
+        ref, n_fallback = row_reference(matrix)
+        print(f"[{note}] row reference = value at {energies[-1]:g} eV "
+              f"(highest binding energy); {n_fallback} rows used neighboring-column average")
+        matrix = np.divide(matrix, ref[:, None],
+                           out=np.full_like(matrix, np.nan),
+                           where=np.isfinite(ref[:, None]) & (ref[:, None] != 0))
+        cbar_label = f"counts/s normalized to {energies[-1]:g} eV"
 
     cmap = plt.get_cmap("magma").copy()
     cmap.set_bad("lightgray")
@@ -153,7 +187,7 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note):
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
     ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
     ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
-    fig.colorbar(mesh, ax=ax, label="counts / s")
+    fig.colorbar(mesh, ax=ax, label=cbar_label)
     fig.tight_layout()
     fig.savefig(out_file, dpi=150)
     plt.close(fig)
@@ -183,6 +217,12 @@ def main():
     fixed_png = PLOT_FILE.replace(".png", f"_{w:g}V.png")
     plot_heatmap(y, energy, counts, fixed_edges, fixed_png,
                  f"fixed {w:g} V bins, cell-averaged")
+
+    # 3) optimal (auto) bins, each row normalized to the highest binding energy
+    norm_png = PLOT_FILE.replace(".png", "_norm.png")
+    plot_heatmap(y, energy, counts, y_edges, norm_png,
+                 f"auto {np.diff(y_edges).mean():g} V bins, row-normalized to max BE",
+                 normalize=True)
 
 
 if __name__ == "__main__":
