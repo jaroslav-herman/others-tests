@@ -13,8 +13,8 @@ Output files: O1s_529.0.dat, O1s_529.3.dat, ... in ./regions/
 import os
 import re
 
-FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\CV_5mbar_Fixed_energy_5mVs_03.xy"  # path to your file
-OUT_DIR = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS/CV_5mbar_Fixed_energy_5mVs_03/"                        # output folder
+FILE = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\CV_5mbar_Fixed_energy_5mVs_Ir_01.xy"  # path to your file
+OUT_DIR = r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\CV_5mbar_Fixed_energy_5mVs_Ir_01/"                        # output folder
 
 def parse_file(filename):
     regions = {}
@@ -67,9 +67,14 @@ def parse_file(filename):
 def save_regions(regions, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     for name, d in regions.items():
-        # Extract 'O1s' and the energy from the region name
-        m = re.match(r"(\S+)\s+([-\d.]+)\s*$", name)
-        element, energy = (m.group(1), m.group(2)) if m else (name, "unknown")
+        # The final token is the binding energy. Remove spaces from the
+        # element/orbital prefix, e.g. "Ir 4f" -> "Ir4f".
+        m = re.match(r"^(.+?)\s+(-?\d+(?:\.\d+)?)\s*$", name)
+        element, energy = (
+            (re.sub(r"\s+", "", m.group(1)), m.group(2))
+            if m
+            else (re.sub(r"\s+", "", name), "unknown")
+        )
         energy_label = energy.replace(".", "p")   # '533.2' -> '533p2'
         fname = f"{element}_{energy_label}.dat"
         path = os.path.join(out_dir, fname)
