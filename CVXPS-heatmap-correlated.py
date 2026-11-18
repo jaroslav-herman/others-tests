@@ -19,7 +19,8 @@ lowest one (if that cell is empty, the neighboring energy cells of the row
 are averaged instead).
 
 plus a spectrum plot where counts/s are averaged over all voltage bins
-(<csv_basename>_spectrum_voltage_avg.png).
+(<csv_basename>_spectrum_voltage_avg.png), and a heatmap where that averaged
+spectrum is subtracted from every row (<csv_basename>_heatmap_spectrum_sub.png).
 
 Usage: python CVXPS-heatmap-correlated.py [correlated_csv] [out_png]
 Output: <csv_basename>_heatmap.png (auto bins),
@@ -27,6 +28,8 @@ Output: <csv_basename>_heatmap.png (auto bins),
         <csv_basename>_heatmap_norm_maxBE.png / _norm_minBE.png
         (auto bins, row-normalized to highest / lowest binding energy),
         <csv_basename>_spectrum_voltage_avg.png (voltage-averaged spectrum),
+        <csv_basename>_spectrum_sub.png (auto bins, spectrum subtracted
+        per row),
         all next to the CSV.
 """
 
@@ -176,7 +179,7 @@ def row_reference(matrix, side):
 
 
 def plot_heatmap(y, energy, counts, y_edges, out_file, note,
-                 normalize=None):
+                 normalize=None, subtract_spectrum=False):
     energies = np.unique(energy)
     matrix, nums = bin_cells(y, energy, counts, y_edges)
     filled = nums > 0
@@ -184,6 +187,16 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
           f"cells filled {int(filled.sum())}/{matrix.size} ({filled.sum() / matrix.size:.0%}), "
           f"{nums[filled].mean():.1f} pts/filled cell (averaged)")
     cbar_label = "counts / s"
+    vmin = vmax = None
+    if subtract_spectrum:
+        with np.errstate(invalid="ignore"):
+            spectrum = np.nanmean(matrix, axis=0)
+        matrix = matrix - spectrum[None, :]
+        m = np.nanmax(np.abs(matrix))
+        vmin, vmax = -m, m
+        cbar_label = "counts/s - voltage-averaged spectrum"
+        print(f"[{note}] subtracted per-row the voltage-averaged spectrum "
+              f"(range ±{m:.1f})")
     if normalize in ("min", "max"):
         ref, n_fallback = row_reference(matrix, normalize)
         ref_e = energies[0] if normalize == "min" else energies[-1]
@@ -195,11 +208,12 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
                            where=np.isfinite(ref[:, None]) & (ref[:, None] != 0))
         cbar_label = f"counts/s normalized to {ref_e:g} eV"
 
-    cmap = plt.get_cmap("magma").copy()
+    cmap = plt.get_cmap("RdBu_r" if subtract_spectrum else "magma").copy()
     cmap.set_bad("lightgray")
     fig, ax = plt.subplots(figsize=(9, 7))
     mesh = ax.pcolormesh(energy_edges(energies), y_edges,
-                         np.ma.masked_invalid(matrix), shading="flat", cmap=cmap)
+                         np.ma.masked_invalid(matrix), shading="flat", cmap=cmap,
+                         vmin=vmin, vmax=vmax)
     ax.axhline(V_HI, color="white", lw=0.8, ls="--", alpha=0.7)
     ax.set_ylim(V_LO, 2 * V_HI - V_LO)
     ticks = np.arange(V_LO, 2 * V_HI - V_LO + 1e-9, 0.2)
@@ -208,7 +222,7 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
                         for v in ticks])
     ax.set_xlabel("Binding energy (eV)")
     ax.set_ylabel("Potential Ewe (V)  (up-sweep, then down-sweep)")
-    ax.set_title(f"Ir 4f counts/s vs binding energy and potential ({note})")
+    ax.set_title(f"Ir 4f counts/s heatmap ({note})")
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
     ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
     ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
@@ -273,6 +287,12 @@ def main():
     matrix, _ = bin_cells(y, energy, counts, y_edges)
     plot_spectrum(np.unique(energy), matrix,
                   PLOT_FILE.replace(".png", "_spectrum_voltage_avg.png"))
+
+    # 5) auto bins, voltage-averaged spectrum subtracted from each row
+    plot_heatmap(y, energy, counts, y_edges,
+                 PLOT_FILE.replace(".png", "_spectrum_sub.png"),
+                 f"auto {np.diff(y_edges).mean():g} V bins, spectrum subtracted per row",
+                 subtract_spectrum=True)
 
 
 if __name__ == "__main__":
