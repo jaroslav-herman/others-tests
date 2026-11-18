@@ -12,10 +12,12 @@ fill   : counts/s, averaged over all points in the same (y bin, energy) cell
 Y bins are checked, not guessed: all "nice" widths (1/2/2.5/5 x 10^k) whose
 bin count lies in [MIN_BINS, MAX_BINS] are evaluated (fill ratio, points per
 cell), and the finest width that still fills >= FILL_TARGET of the cells is
-chosen.
+chosen. In addition, a second heatmap with the fixed width FIXED_BIN_WIDTH is
+always produced.
 
 Usage: python CVXPS-heatmap-correlated.py [correlated_csv] [out_png]
-Output: <csv_basename>_heatmap.png next to the CSV.
+Output: <csv_basename>_heatmap.png (auto bins) and
+        <csv_basename>_heatmap_<width>V.png (fixed bins) next to the CSV.
 """
 
 import csv
@@ -40,6 +42,7 @@ V_HI = 1.8   # CV upper vertex (E1)
 MIN_BINS = 20
 MAX_BINS = 120
 FILL_TARGET = 0.95
+FIXED_BIN_WIDTH = 0.025  # V, second heatmap is always made with this resolution
 NICE_STEPS = (1.0, 2.0, 2.5, 5.0)  # x 10^k
 DV_THRESHOLD = 1e-3  # V per sample below which the sweep direction is "flat"
 
@@ -125,22 +128,13 @@ def energy_edges(energies):
                            [energies[-1] + (energies[-1] - mid[-1])]))
 
 
-def main():
-    t, volt, energy, counts = load_correlated(CORRELATED_CSV)
+def plot_heatmap(y, energy, counts, y_edges, out_file, note):
     energies = np.unique(energy)
-    y, direction = folded_y(t, volt)
-    print(f"Loaded {counts.size} points from {CORRELATED_CSV}")
-    print(f"Potential {volt.min():.3f}..{volt.max():.3f} V; "
-          f"up-sweep points: {int((direction > 0).sum())}, "
-          f"down-sweep: {int((direction < 0).sum())}")
-    print(f"Folded y axis: {y.min():.3f} .. {y.max():.3f} "
-          f"(labels {V_LO}->{V_HI} up, {V_HI}->{V_LO} down)")
-    print(f"X: {energies.size} binding energies "
-          f"({energies.min():g}..{energies.max():g} eV)")
-
-    y_edges = choose_y_bins(y, energy, counts)
     matrix, nums = bin_cells(y, energy, counts, y_edges)
-    print(f"cells filled: {int((nums > 0).sum())}/{matrix.size}")
+    filled = nums > 0
+    print(f"[{note}] bins={len(y_edges) - 1}, width={np.diff(y_edges).mean():g} V, "
+          f"cells filled {int(filled.sum())}/{matrix.size} ({filled.sum() / matrix.size:.0%}), "
+          f"{nums[filled].mean():.1f} pts/filled cell (averaged)")
 
     cmap = plt.get_cmap("magma").copy()
     cmap.set_bad("lightgray")
@@ -155,14 +149,40 @@ def main():
                         for v in ticks])
     ax.set_xlabel("Binding energy (eV)")
     ax.set_ylabel("Potential Ewe (V)  (up-sweep, then down-sweep)")
-    ax.set_title("Ir 4f counts/s vs binding energy and potential (cell-averaged)")
+    ax.set_title(f"Ir 4f counts/s vs binding energy and potential ({note})")
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
     ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
     ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
     fig.colorbar(mesh, ax=ax, label="counts / s")
     fig.tight_layout()
-    fig.savefig(PLOT_FILE, dpi=150)
-    print(f"Saved heatmap to {PLOT_FILE}")
+    fig.savefig(out_file, dpi=150)
+    plt.close(fig)
+    print(f"Saved heatmap to {out_file}")
+
+
+def main():
+    t, volt, energy, counts = load_correlated(CORRELATED_CSV)
+    y, direction = folded_y(t, volt)
+    print(f"Loaded {counts.size} points from {CORRELATED_CSV}")
+    print(f"Potential {volt.min():.3f}..{volt.max():.3f} V; "
+          f"up-sweep points: {int((direction > 0).sum())}, "
+          f"down-sweep: {int((direction < 0).sum())}")
+    print(f"Folded y axis: {y.min():.3f} .. {y.max():.3f} "
+          f"(labels {V_LO}->{V_HI} up, {V_HI}->{V_LO} down)")
+    print(f"X: {np.unique(energy).size} binding energies "
+          f"({np.unique(energy).min():g}..{np.unique(energy).max():g} eV)")
+
+    # 1) automatic bin choice
+    y_edges = choose_y_bins(y, energy, counts)
+    plot_heatmap(y, energy, counts, y_edges, PLOT_FILE,
+                 f"auto {np.diff(y_edges).mean():g} V bins, cell-averaged")
+
+    # 2) fixed-resolution heatmap
+    w = FIXED_BIN_WIDTH
+    fixed_edges = np.arange(np.floor(y.min() / w) * w, y.max() + w, w)
+    fixed_png = PLOT_FILE.replace(".png", f"_{w:g}V.png")
+    plot_heatmap(y, energy, counts, fixed_edges, fixed_png,
+                 f"fixed {w:g} V bins, cell-averaged")
 
 
 if __name__ == "__main__":
