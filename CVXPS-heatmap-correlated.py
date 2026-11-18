@@ -62,21 +62,26 @@ NICE_STEPS = (1.0, 2.0, 2.5, 5.0)  # x 10^k
 DV_THRESHOLD = 1e-3  # V per sample below which the sweep direction is "flat"
 
 
+SPECIES = "XPS"  # e.g. "Ir 4f" or "O1s", set from the region names in main()
+
+
 def load_correlated(path):
-    t, volt, energy, counts = [], [], [], []
+    t, volt, energy, counts, region = [], [], [], [], []
     with open(path, "r", encoding="utf-8", newline="") as f:
         reader = csv.reader(row for row in f if not row.startswith("#"))
         header = next(reader)
         i_t, i_v, i_e, i_c = (header.index(c) for c in
                               ("cv_time_s", "voltage_Ewe_V",
                                "binding_energy_eV", "counts_s"))
+        i_r = header.index("region")
         for row in reader:
             t.append(float(row[i_t]))
             volt.append(float(row[i_v]))
             energy.append(float(row[i_e]))
             counts.append(float(row[i_c]))
+            region.append(row[i_r])
     return (np.asarray(t), np.asarray(volt), np.asarray(energy),
-            np.asarray(counts))
+            np.asarray(counts), region)
 
 
 def folded_y(t, volt):
@@ -222,7 +227,7 @@ def plot_heatmap(y, energy, counts, y_edges, out_file, note,
                         for v in ticks])
     ax.set_xlabel("Binding energy (eV)")
     ax.set_ylabel("Potential Ewe (V)  (up-sweep, then down-sweep)")
-    ax.set_title(f"Ir 4f counts/s heatmap ({note})")
+    ax.set_title(f"{SPECIES} counts/s heatmap ({note})")
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
     ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
     ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
@@ -243,7 +248,7 @@ def plot_spectrum(energies, matrix, out_file):
                     label="±1 std across voltage bins")
     ax.set_xlabel("Binding energy (eV)")
     ax.set_ylabel("counts / s")
-    ax.set_title("Ir 4f spectrum averaged over potential "
+    ax.set_title(f"{SPECIES} spectrum averaged over potential "
                  f"({int(n.min())}-{int(n.max())} voltage bins per energy)")
     ax.invert_xaxis()  # XPS convention: binding energy decreases to the right
     ax.legend()
@@ -253,7 +258,10 @@ def plot_spectrum(energies, matrix, out_file):
 
 
 def main():
-    t, volt, energy, counts = load_correlated(CORRELATED_CSV)
+    global SPECIES
+    t, volt, energy, counts, region = load_correlated(CORRELATED_CSV)
+    if region and region[0].split():
+        SPECIES = " ".join(region[0].split()[:-1]) or SPECIES  # drop the energy
     y, direction = folded_y(t, volt)
     print(f"Loaded {counts.size} points from {CORRELATED_CSV}")
     print(f"Potential {volt.min():.3f}..{volt.max():.3f} V; "
