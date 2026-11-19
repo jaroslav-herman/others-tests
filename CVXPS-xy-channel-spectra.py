@@ -10,7 +10,10 @@ and a viridis color gradient.
 If a standard .xy file (FixedAnalyzerTransmission mode) is given, its spectrum
 averaged over all channels is plotted as a thick background line ("true" spectrum).
 
-Usage: python CVXPS-xy-channel-spectra.py [xy_file] [out_png] [standard_xy]
+Optional region filter: if provided as 4th argument, only spectra from that
+region (e.g., "Au4f") will be plotted.
+
+Usage: python CVXPS-xy-channel-spectra.py [xy_file] [out_png] [standard_xy] [region]
 """
 
 import os
@@ -31,15 +34,20 @@ OUT_PNG = (sys.argv[2] if len(sys.argv) > 2 else os.path.join(
     os.path.splitext(os.path.basename(XY_FILE))[0] + "_channel_spectra.png"))
 STANDARD_XY = (sys.argv[3] if len(sys.argv) > 3 else
                r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\Au_ref_standard.xy")
+REGION_FILTER = (sys.argv[4] if len(sys.argv) > 4 else None)  # Optional region filter
 
 Y_SHIFT = 0.2  # counts/s vertical offset between consecutive channels
 
 
-def parse_xy_channels(filename):
+def parse_xy_channels(filename, region_filter=None):
     """Parse FixedEnergies or FixedAnalyzerTransmission .xy with channel-split scans.
     
     For FixedEnergies: Region line has binding energy, data rows are 'index counts/s ErrorBar'
     For FixedAnalyzerTransmission: Region line has no energy, data rows are 'energy counts/s ErrorBar'
+    
+    Args:
+        filename: Path to .xy file
+        region_filter: If provided, only parse data from this region
     
     Return (channels, energies, matrix[ch_idx, e_idx] = mean counts/s, region_name)."""
     channels, energies = [], []
@@ -49,7 +57,9 @@ def parse_xy_channels(filename):
     scan_channel = None
     in_scan = False
     region_name = ""
+    current_region = None
     col_energy_first = False
+    data_region = None  # Track which region we actually collected data from
 
     with open(filename, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -65,11 +75,14 @@ def parse_xy_channels(filename):
                 r"(?:\s*,\s*Channel:\s*(\d+))?\s*$", line)
             if m:
                 scan_channel = int(m.group(2)) if m.group(2) else None
-                in_scan = scan_channel is not None
+                # Only process scans that are in the filtered region (or all regions if no filter)
+                in_scan = scan_channel is not None and (region_filter is None or current_region == region_filter)
+                if in_scan and data_region is None:
+                    data_region = current_region
                 continue
             m = re.match(r"#\s*Region:\s*(.+?)\s*$", line)
             if m:
-                current_region = m.group(1)
+                current_region = m.group(1).strip()
                 em = re.match(r"^(.+?)\s+(-?\d+(?:\.\d+)?)\s*$", current_region)
                 binding_energy = float(em.group(2)) if em else None
                 if em:
@@ -117,13 +130,20 @@ def parse_xy_channels(filename):
             s = sums.get((ch, e))
             if s:
                 matrix[ci, ei] = s[0] / s[1]
-    return channels, np.array(energies), matrix, region_name
+    # Use the data_region if we filtered, otherwise use region_name
+    return_region = data_region if data_region else region_name
+    return channels, np.array(energies), matrix, return_region
 
 
-def parse_xy_standard(filename):
+def parse_xy_standard(filename, region_filter=None):
     """Parse a FixedAnalyzerTransmission .xy: data rows are 'energy counts/s ErrorBar',
     region name has no energy suffix. Average over all channels and scans
     (typical single-channel spectrum = 'true' shape reference).
+    
+    Args:
+        filename: Path to .xy file
+        region_filter: If provided, only parse data from this region
+    
     Return (energies, mean_counts, region_name)."""
     energies = []
     seen_e = set()
@@ -131,6 +151,7 @@ def parse_xy_standard(filename):
     scan_channel = None
     in_scan = False
     region_name = ""
+    current_region = None
     col_energy_first = False
 
     with open(filename, "r", encoding="utf-8", errors="replace") as f:
@@ -144,11 +165,12 @@ def parse_xy_standard(filename):
                 r"(?:\s*,\s*Channel:\s*(\d+))?\s*$", line)
             if m:
                 scan_channel = int(m.group(2)) if m.group(2) else None
-                in_scan = scan_channel is not None
+                in_scan = scan_channel is not None and (region_filter is None or current_region == region_filter)
                 continue
             m = re.match(r"#\s*Region:\s*(.+?)\s*$", line)
             if m:
-                region_name = m.group(1).strip()
+                current_region = m.group(1).strip()
+                region_name = current_region
                 in_scan = False
                 continue
             # data row: 'energy counts/s ErrorBar' (energy-first format)
@@ -169,14 +191,24 @@ def parse_xy_standard(filename):
 
 
 def main():
-    channels, energies, matrix, region = parse_xy_channels(XY_FILE)
+    # If region filter is specified, update output filename
+    if REGION_FILTER:
+        out_dir = os.path.dirname(XY_FILE)
+        out_base = os.path.splitext(os.path.basename(XY_FILE))[0]
+        OUT_PNG = os.path.join(out_dir, f"{out_base}_{REGION_FILTER}_channel_spectra.png")
+    
+    channels, energies, matrix, region = parse_xy_channels(XY_FILE, REGION_FILTER)
     print(f"Loaded {matrix.size} cells: {len(channels)} channels x {len(energies)} energies")
-    print(f"Region: {region}, channels {channels[0]}..{channels[-1]}, "
-          f"BE {energies[0]:g}..{energies[-1]:g} eV")
+    if len(channels) > 0:
+        print(f"Region: {region}, channels {channels[0]}..{channels[-1]}, "
+              f"BE {energies[0]:g}..{energies[-1]:g} eV")
+    else:
+        print(f"No data found for region '{REGION_FILTER}'")
+        return
 
     std_energies, std_counts, std_region = None, None, None
     if STANDARD_XY and os.path.exists(STANDARD_XY):
-        std_energies, std_counts, std_region = parse_xy_standard(STANDARD_XY)
+        std_energies, std_counts, std_region = parse_xy_standard(STANDARD_XY, REGION_FILTER)
         print(f"Standard: {std_region}, {len(std_energies)} energies "
               f"{std_energies[0]:g}..{std_energies[-1]:g} eV, "
               f"counts {std_counts.min():.2f}..{std_counts.max():.2f}")
