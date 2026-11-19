@@ -192,10 +192,11 @@ def parse_xy_standard(filename, region_filter=None):
 
 def main():
     # If region filter is specified, update output filename
+    out_png = OUT_PNG
     if REGION_FILTER:
         out_dir = os.path.dirname(XY_FILE)
         out_base = os.path.splitext(os.path.basename(XY_FILE))[0]
-        OUT_PNG = os.path.join(out_dir, f"{out_base}_{REGION_FILTER}_channel_spectra.png")
+        out_png = os.path.join(out_dir, f"{out_base}_{REGION_FILTER}_channel_spectra.png")
     
     channels, energies, matrix, region = parse_xy_channels(XY_FILE, REGION_FILTER)
     print(f"Loaded {matrix.size} cells: {len(channels)} channels x {len(energies)} energies")
@@ -250,9 +251,9 @@ def main():
                     color=cmap(norm(channels[ci])), va="center")
 
     fig.tight_layout()
-    fig.savefig(OUT_PNG, dpi=150)
+    fig.savefig(out_png, dpi=150)
     plt.close(fig)
-    print(f"Saved plot to {OUT_PNG}")
+    print(f"Saved plot to {out_png}")
 
 
 if __name__ == "__main__":
