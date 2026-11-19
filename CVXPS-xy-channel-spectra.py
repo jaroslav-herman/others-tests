@@ -10,10 +10,11 @@ and a viridis color gradient.
 If a standard .xy file (FixedAnalyzerTransmission mode) is given, its spectrum
 averaged over all channels is plotted as a thick background line ("true" spectrum).
 
-Optional region filter: if provided as 4th argument, only spectra from that
-region (e.g., "Au4f") will be plotted.
+Optional region filters:
+  - 4th arg: region filter for main data (e.g., "Au4f")
+  - 5th arg: region filter for standard file (e.g., "Ir4f")
 
-Usage: python CVXPS-xy-channel-spectra.py [xy_file] [out_png] [standard_xy] [region]
+Usage: python CVXPS-xy-channel-spectra.py [xy_file] [out_png] [standard_xy] [main_region] [std_region]
 """
 
 import os
@@ -34,7 +35,8 @@ OUT_PNG = (sys.argv[2] if len(sys.argv) > 2 else os.path.join(
     os.path.splitext(os.path.basename(XY_FILE))[0] + "_channel_spectra.png"))
 STANDARD_XY = (sys.argv[3] if len(sys.argv) > 3 else
                r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\Au_ref_standard.xy")
-REGION_FILTER = (sys.argv[4] if len(sys.argv) > 4 else None)  # Optional region filter
+REGION_FILTER = (sys.argv[4] if len(sys.argv) > 4 else None)  # Optional region filter for main data
+STD_REGION_FILTER = (sys.argv[5] if len(sys.argv) > 5 else None)  # Optional region filter for standard
 
 Y_SHIFT = 0.2  # counts/s vertical offset between consecutive channels
 
@@ -47,9 +49,13 @@ def parse_xy_channels(filename, region_filter=None):
     
     Args:
         filename: Path to .xy file
-        region_filter: If provided, only parse data from this region
+        region_filter: If provided, only parse data from this region. Empty string = None.
     
     Return (channels, energies, matrix[ch_idx, e_idx] = mean counts/s, region_name)."""
+    # Treat empty string as None
+    if region_filter == "":
+        region_filter = None
+    
     channels, energies = [], []
     seen_ch, seen_e = set(), set()
     sums = {}
@@ -142,9 +148,13 @@ def parse_xy_standard(filename, region_filter=None):
     
     Args:
         filename: Path to .xy file
-        region_filter: If provided, only parse data from this region
+        region_filter: If provided, only parse data from this region. Empty string = None.
     
     Return (energies, mean_counts, region_name)."""
+    # Treat empty string as None
+    if region_filter == "":
+        region_filter = None
+    
     energies = []
     seen_e = set()
     sums = {}
@@ -153,6 +163,7 @@ def parse_xy_standard(filename, region_filter=None):
     region_name = ""
     current_region = None
     col_energy_first = False
+    data_region = None  # Track which region we actually collected data from
 
     with open(filename, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -166,6 +177,8 @@ def parse_xy_standard(filename, region_filter=None):
             if m:
                 scan_channel = int(m.group(2)) if m.group(2) else None
                 in_scan = scan_channel is not None and (region_filter is None or current_region == region_filter)
+                if in_scan and data_region is None:
+                    data_region = current_region
                 continue
             m = re.match(r"#\s*Region:\s*(.+?)\s*$", line)
             if m:
@@ -187,7 +200,9 @@ def parse_xy_standard(filename, region_filter=None):
 
     energies.sort()
     mean_counts = np.array([sums[e][0] / sums[e][1] for e in energies])
-    return np.array(energies), mean_counts, region_name
+    # Use data_region if available, otherwise region_name
+    return_region = data_region if data_region else region_name
+    return np.array(energies), mean_counts, return_region
 
 
 def main():
@@ -209,7 +224,7 @@ def main():
 
     std_energies, std_counts, std_region = None, None, None
     if STANDARD_XY and os.path.exists(STANDARD_XY):
-        std_energies, std_counts, std_region = parse_xy_standard(STANDARD_XY, REGION_FILTER)
+        std_energies, std_counts, std_region = parse_xy_standard(STANDARD_XY, STD_REGION_FILTER)
         print(f"Standard: {std_region}, {len(std_energies)} energies "
               f"{std_energies[0]:g}..{std_energies[-1]:g} eV, "
               f"counts {std_counts.min():.2f}..{std_counts.max():.2f}")
