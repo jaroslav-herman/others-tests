@@ -173,116 +173,84 @@ print(f"Saving Nyquist plot to: {output_plot}")
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
-# Also create a plot showing the time evolution of impedance at a specific frequency
-print("\nCreating time evolution plots...")
+# Plot voltage and current time evolution for individual frequency cycles
+print("\nPlotting voltage and current time evolution for individual frequency cycles...")
 
-# Select a characteristic frequency (e.g., the most common or a mid-range one)
-# Use a frequency in the middle of the range
-selected_freq = np.median(unique_freqs)
+# For each frequency, plot Ewe and I vs time
+# Group the original data by frequency and plot the raw time evolution
+for freq in unique_freqs:
+    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
+    
+    if len(freq_data) < 2:
+        continue
+    
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    
+    # Plot voltage
+    ax1.plot(freq_data['time/s'], freq_data['Ewe/V'], 'b-', linewidth=1.5, label=f'Ewe at {freq:.2f} Hz')
+    ax1.set_ylabel('Ewe / V', fontsize=12)
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(fontsize=10)
+    ax1.tick_params(axis='both', which='major', labelsize=10)
+    ax1.set_title(f'Voltage and Current Evolution at {freq:.2f} Hz', fontsize=14)
+    
+    # Plot current
+    ax2.plot(freq_data['time/s'], freq_data['I/mA'], 'r-', linewidth=1.5, label=f'I at {freq:.2f} Hz')
+    ax2.set_ylabel('I / mA', fontsize=12)
+    ax2.set_xlabel('Time / s', fontsize=12)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend(fontsize=10)
+    ax2.tick_params(axis='both', which='major', labelsize=10)
+    
+    plt.tight_layout()
+    
+    # Save each frequency's plot
+    freq_label = f"{freq:.2f}".replace('.', '_')
+    output_freq_plot = os.path.join(output_dir, f"freq_{freq_label}_Hz_voltage_current.png")
+    print(f"Saving voltage/current plot for {freq:.2f} Hz to: {output_freq_plot}")
+    plt.savefig(output_freq_plot, dpi=300, bbox_inches='tight')
+    plt.close()
 
-# Find the closest frequency in our data
-freq_idx = np.argmin(np.abs(unique_freqs - selected_freq))
-selected_freq = unique_freqs[freq_idx]
+# Also create a combined plot with all frequencies for comparison
+print("\nCreating combined voltage and current evolution plots...")
 
-freq_data = df_interp[df_interp['freq/Hz'] == selected_freq].sort_values('time/s')
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+colors = we.get_colors(len(unique_freqs))
 
-if len(freq_data) == 0:
-    # Try the first frequency
-    selected_freq = unique_freqs[0]
-    freq_data = df_interp[df_interp['freq/Hz'] == selected_freq].sort_values('time/s')
+for i, freq in enumerate(unique_freqs):
+    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
+    
+    if len(freq_data) < 2:
+        continue
+    
+    label = f'{freq:.2f} Hz'
+    
+    # Plot voltage for this frequency
+    ax1.plot(freq_data['time/s'], freq_data['Ewe/V'], '-', 
+             color=colors[i], linewidth=1.5, label=label)
+    
+    # Plot current for this frequency
+    ax2.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
+             color=colors[i], linewidth=1.5, label=label)
 
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
-
-ax1.plot(freq_data['time/s'], freq_data['Re(Z)/Ohm'], 'b-', label=f'Re(Z) at {selected_freq:.2f} Hz', linewidth=1.5)
-ax1.set_ylabel('Re(Z) / Ohm', fontsize=12)
+ax1.set_ylabel('Ewe / V', fontsize=12)
 ax1.grid(True, alpha=0.3)
-ax1.legend(fontsize=10)
+ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
 ax1.tick_params(axis='both', which='major', labelsize=10)
+ax1.set_title('Voltage Evolution for All Frequencies', fontsize=14)
 
-ax2.plot(freq_data['time/s'], freq_data['-Im(Z)/Ohm'], 'r-', label=f'-Im(Z) at {selected_freq:.2f} Hz', linewidth=1.5)
-ax2.set_ylabel('-Im(Z) / Ohm', fontsize=12)
+ax2.set_ylabel('I / mA', fontsize=12)
+ax2.set_xlabel('Time / s', fontsize=12)
 ax2.grid(True, alpha=0.3)
-ax2.legend(fontsize=10)
+ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
 ax2.tick_params(axis='both', which='major', labelsize=10)
+ax2.set_title('Current Evolution for All Frequencies', fontsize=14)
 
-ax3.plot(freq_data['time/s'], freq_data['Ewe/V'], 'g-', label=f'Ewe at {selected_freq:.2f} Hz', linewidth=1.5)
-ax3.set_ylabel('Ewe / V', fontsize=12)
-ax3.set_xlabel('Time / s', fontsize=12)
-ax3.grid(True, alpha=0.3)
-ax3.legend(fontsize=10)
-ax3.tick_params(axis='both', which='major', labelsize=10)
-
-plt.suptitle(f'Impedance and Potential Time Evolution at {selected_freq:.2f} Hz', fontsize=14)
 plt.tight_layout()
 
-output_time_plot_base = os.path.basename(input_file).replace('.txt', f'_time_evolution_{selected_freq:.2f}Hz.png')
-output_time_plot = os.path.join(output_dir, output_time_plot_base)
-print(f"Saving time evolution plot to: {output_time_plot}")
-plt.savefig(output_time_plot, dpi=300, bbox_inches='tight')
-plt.close()
-
-# Create Bode plots (magnitude and phase vs frequency) for selected time points
-print("\nCreating Bode plots...")
-
-# Select a subset of time points for clearer visualization
-bode_times = plot_times[::2]  # Every other time point
-bode_colors = we.get_colors(len(bode_times))
-
-plt.figure(figsize=(14, 6))
-
-# Plot for magnitude
-plt.subplot(1, 2, 1)
-for i, plot_time in enumerate(bode_times):
-    time_mask = np.abs(df_interp['time/s'] - plot_time) < 0.05
-    time_data = df_interp[time_mask].sort_values('freq/Hz')
-    
-    if len(time_data) == 0:
-        continue
-    
-    # Calculate magnitude
-    magnitude = np.sqrt(time_data['Re(Z)/Ohm']**2 + time_data['-Im(Z)/Ohm']**2)
-    
-    label = f't={plot_time:.1f} s'
-    plt.semilogx(time_data['freq/Hz'], magnitude, '-', color=bode_colors[i], 
-                 label=label, linewidth=1.5)
-
-plt.xlabel('Frequency / Hz', fontsize=12)
-plt.ylabel('|Z| / Ohm', fontsize=12)
-plt.title('Bode Plot - Magnitude', fontsize=14)
-plt.grid(True, alpha=0.3, which='both')
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
-plt.tick_params(axis='both', which='major', labelsize=10)
-
-# Plot for phase
-plt.subplot(1, 2, 2)
-for i, plot_time in enumerate(bode_times):
-    time_mask = np.abs(df_interp['time/s'] - plot_time) < 0.05
-    time_data = df_interp[time_mask].sort_values('freq/Hz')
-    
-    if len(time_data) == 0:
-        continue
-    
-    # Calculate phase in degrees
-    phase = np.degrees(np.arctan2(-time_data['-Im(Z)/Ohm'], time_data['Re(Z)/Ohm']))
-    
-    label = f't={plot_time:.1f} s'
-    plt.semilogx(time_data['freq/Hz'], phase, '-', color=bode_colors[i], 
-                 label=label, linewidth=1.5)
-
-plt.xlabel('Frequency / Hz', fontsize=12)
-plt.ylabel('Phase / degrees', fontsize=12)
-plt.title('Bode Plot - Phase', fontsize=14)
-plt.grid(True, alpha=0.3, which='both')
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
-plt.tick_params(axis='both', which='major', labelsize=10)
-
-plt.suptitle('Bode Plots - Time-Resolved PEIS', fontsize=16)
-plt.tight_layout()
-
-output_bode_plot_base = os.path.basename(input_file).replace('.txt', '_bode_interpolated.png')
-output_bode_plot = os.path.join(output_dir, output_bode_plot_base)
-print(f"Saving Bode plot to: {output_bode_plot}")
-plt.savefig(output_bode_plot, dpi=300, bbox_inches='tight')
+output_combined_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_combined_voltage_current.png'))
+print(f"Saving combined voltage/current plot to: {output_combined_plot}")
+plt.savefig(output_combined_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
 # Create a summary text file with processing information
@@ -314,11 +282,11 @@ Output Files:
 2. Nyquist plot: {output_plot_base}
    - Shows impedance spectra at selected time points
 
-3. Time evolution plot: {output_time_plot_base}
-   - Shows Re(Z), -Im(Z), and Ewe vs time at {selected_freq:.2f} Hz
+3. Individual frequency voltage/current plots:
+   - {len(unique_freqs)} plots showing Ewe and I vs time for each frequency
 
-4. Bode plot: {output_bode_plot_base}
-   - Shows magnitude and phase vs frequency at selected time points
+4. Combined voltage/current plot: {os.path.basename(output_combined_plot)}
+   - Shows voltage and current evolution for all frequencies together
 
 Processing completed successfully.
 """
@@ -332,13 +300,13 @@ print(f"Summary saved to: {summary_file}")
 print("\nProcessing complete!")
 print(f"Interpolated data saved to: {output_csv}")
 print(f"Nyquist plot saved to: {output_plot}")
-print(f"Time evolution plot saved to: {output_time_plot}")
-print(f"Bode plot saved to: {output_bode_plot}")
+print(f"Individual frequency plots saved to: {output_dir}")
+print(f"Combined voltage/current plot saved to: {output_combined_plot}")
 print(f"Summary saved to: {summary_file}")
 
 # List all output files
 print("\nOutput files in directory:")
-for f in os.listdir(output_dir):
+for f in sorted(os.listdir(output_dir)):
     fpath = os.path.join(output_dir, f)
     size = os.path.getsize(fpath)
     print(f"  {f} ({size} bytes)")
