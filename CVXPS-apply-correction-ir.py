@@ -335,6 +335,42 @@ def main():
         f1d = OUT_PREFIX + f"_heatmap_corrected_folded_smooth{window}.png"
         save_fig(fig, f1d)
 
+        # voltage-averaged spectrum from the smoothed heatmap
+        with np.errstate(invalid="ignore"):
+            v_avg_smooth = np.nanmean(h_smooth, axis=0)
+            v_std_smooth = np.nanstd(h_smooth, axis=0)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(e_grid, v_avg_smooth, "-", lw=2.5, color="darkblue",
+                label=f"voltage-averaged spectrum (smooth {window} bins)")
+        ax.fill_between(e_grid, v_avg_smooth - v_std_smooth, v_avg_smooth + v_std_smooth,
+                        alpha=0.2, color="blue", label="±1 std across voltage")
+        ax.set_xlabel("Binding energy (eV, corrected)")
+        ax.set_ylabel("counts/s")
+        ax.set_title(f"{region_name} averaged spectrum, smooth={window} bins ({window*V_BIN:.2f} V)")
+        ax.invert_xaxis(); ax.legend(); ax.grid(alpha=0.3)
+        fig.tight_layout()
+        f1e = OUT_PREFIX + f"_spectrum_smooth{window}.png"
+        save_fig(fig, f1e)
+
+        # differential heatmap: smoothed minus its own voltage-averaged spectrum
+        h_diff = h_smooth - v_avg_smooth[None, :]
+        m = np.nanmax(np.abs(h_diff))
+        symlog = mcolors.SymLogNorm(linthresh=10.0, vmin=-m, vmax=m)
+        fig, ax = plt.subplots(figsize=(11, 8))
+        cmap_rb = plt.get_cmap("RdBu_r").copy()
+        cmap_rb.set_bad("lightgray")
+        mesh = ax.pcolormesh(e_edges, y_edges, np.ma.masked_invalid(h_diff),
+                             shading="flat", cmap=cmap_rb, norm=symlog)
+        decorate_folded(ax)
+        ax.set_xlabel("Binding energy (eV, corrected, original range)")
+        ax.set_title(f"{region_name} differential heatmap, smooth={window} bins "
+                     f"({window*V_BIN:.2f} V), sym-log")
+        ax.invert_xaxis()
+        fig.colorbar(mesh, ax=ax, label="counts/s - voltage-avg (sym-log)")
+        fig.tight_layout()
+        f1f = OUT_PREFIX + f"_heatmap_corrected_folded_smooth{window}_diff.png"
+        save_fig(fig, f1f)
+
 
 
     # --- plot 3: per-channel corrected spectra (kept only) ---
