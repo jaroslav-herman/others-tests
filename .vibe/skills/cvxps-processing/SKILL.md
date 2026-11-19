@@ -17,11 +17,13 @@ CVXPS = time-resolved XPS measured during cyclic voltammetry. Data lives in
 
 Time correlation: .mpt local time is shifted by −1 h (CET) to UTC; .xy is already UTC.
 
+**Computer time offset**: The EC computer clock is **64 seconds ahead** of the XPS computer clock. Use `-64` as the TIME_OFFSET_SECONDS parameter in `CVXPS-correlate-channel.py` to align the data properly.
+
 ## Scripts (repo root, run with `.venv\Scripts\python.exe`)
 
 | Script | Purpose |
 |--------|---------|
-| `CVXPS-correlate-channel.py <mpt> <xy> <out_csv> <ch_min> <ch_max>` | Correlate CV (.mpt) with channel-filtered XPS (.xy) on UTC time; interpolate Ewe/I at each XPS scan; export CSV with `channel` column |
+| `CVXPS-correlate-channel.py <mpt> <xy> <out_csv> <ch_min> <ch_max> [time_offset_s]` | Correlate CV (.mpt) with channel-filtered XPS (.xy) on UTC time; interpolate Ewe/I at each XPS scan; export CSV with `channel` column. Optional `time_offset_s` (default 0) adjusts for computer clock differences. Use `-64` for current EC/XPS setup. |
 | `CVXPS-heatmap-channel.py <csv> <png> <tag>` | Heatmap from correlated CSV: folded y-axis (up 0.6→1.8 V, down 1.8→3.0), auto + fixed bins, row-normalized, spectrum-subtracted (sym-log) |
 | `CVXPS-channel-spectra.py <csv> <png>` | Voltage-averaged spectra per channel, y-shifted, viridis color gradient |
 | `CVXPS-xy-channel-spectra.py <xy> <png> [standard_xy]` | Same but from raw .xy (no CV correlation); optional standard-mode reference as background |
@@ -40,9 +42,10 @@ Time correlation: .mpt local time is shifted by −1 h (CET) to UTC; .xy is alre
 python CVXPS-correlate-channel.py ^
   "C:\...\CVXPS\12_CV.mpt" ^
   "C:\...\CVXPS\CV_5mbar_Fixed_energy_20mVs_channel_O1s.xy" ^
-  "C:\...\CVXPS\channel_ranges\ch0-145\12_CV_ch0-145_XPS_correlated.csv" 0 145
+  "C:\...\CVXPS\channel_ranges\ch0-145\12_CV_ch0-145_XPS_correlated.csv" 0 145 -64
 python CVXPS-heatmap-channel.py "<csv>" "" ch0-145
 ```
+**Note**: The `-64` parameter accounts for the EC computer being 64 seconds ahead of the XPS computer.
 
 ### 2. Find energy correction from reference (Au or Ir at OCV)
 ```bash
@@ -79,4 +82,5 @@ python CVXPS-ir-voltage-cuts.py <ir_csv> <au_corr_csv> <prefix>
 - **Literature BE**: Au 4f 7/2=84.0, 4f 5/2=87.67 eV; Ir 4f 7/2≈60.8, 4f 5/2≈63.8 eV.
 - **Float rounding bug**: always `round(round(y/V_BIN)*V_BIN, 2)` when binning to avoid empty heatmap rows from key mismatch.
 - **OneDrive file locks**: use `save_fig()` with retry (5 attempts, 2 s sleep).
+- **Computer time offset**: EC computer is **64 seconds ahead** of XPS computer. Use `TIME_OFFSET_SECONDS=-64` when correlating data.
 - **Always commit and push new scripts to main** after creating them.
