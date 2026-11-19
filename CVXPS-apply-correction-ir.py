@@ -19,6 +19,7 @@ import sys
 import matplotlib
 
 matplotlib.use("Agg")
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
@@ -237,6 +238,65 @@ def main():
     f1 = OUT_PREFIX + "_heatmap_corrected_folded.png"
     fig.savefig(f1, dpi=150); plt.close(fig)
     print(f"Saved {f1}")
+
+    # --- helper: folded-y axis decorations ---
+    def decorate_folded(ax):
+        ax.axhline(V_HI, color="white", lw=0.8, ls="--", alpha=0.7)
+        ax.set_ylim(V_LO, 2 * V_HI - V_LO)
+        ticks = np.arange(V_LO, 2 * V_HI - V_LO + 1e-9, 0.2)
+        ax.set_yticks(ticks)
+        ax.set_yticklabels([f"{v:.1f}" if v <= V_HI + 1e-9 else f"{2*V_HI - v:.1f}" for v in ticks])
+        ax.set_ylabel("Potential Ewe (V) (up-sweep, then down-sweep)")
+        ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
+        ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
+
+    e_edges = np.concatenate([e_grid - E_GRID_STEP/2, [e_grid[-1] + E_GRID_STEP/2]])
+    y_edges = np.concatenate([y_vals - V_BIN/2, [y_vals[-1] + V_BIN/2]])
+
+    # --- plot 2b: row-normalized heatmap (normalize to highest 1 eV) ---
+    norm_e_mask = e_grid >= (e_grid[-1] - 1.0)  # highest 1 eV
+    with np.errstate(invalid="ignore"):
+        row_ref = np.nanmean(heatmap[:, norm_e_mask], axis=1)
+    heatmap_norm = np.divide(heatmap, row_ref[:, None],
+                             out=np.full_like(heatmap, np.nan),
+                             where=np.isfinite(row_ref[:, None]) & (row_ref[:, None] != 0))
+
+    fig, ax = plt.subplots(figsize=(11, 8))
+    mesh = ax.pcolormesh(e_edges, y_edges, np.ma.masked_invalid(heatmap_norm),
+                         shading="flat", cmap="magma")
+    decorate_folded(ax)
+    ax.set_xlabel("Binding energy (eV, corrected, original range)")
+    ax.set_title(f"{region_name} heatmap row-normalized to highest 1 eV "
+                 f"({e_grid[-1]-1:.1f}-{e_grid[-1]:.1f} eV)")
+    ax.invert_xaxis()
+    fig.colorbar(mesh, ax=ax, label=f"counts/s normalized to mean of {e_grid[-1]-1:.1f}-{e_grid[-1]:.1f} eV")
+    fig.tight_layout()
+    f1b = OUT_PREFIX + "_heatmap_corrected_folded_norm_maxBE.png"
+    fig.savefig(f1b, dpi=150); plt.close(fig)
+    print(f"Saved {f1b}")
+
+    # --- plot 2c: differential heatmap (subtract voltage-averaged spectrum per row) ---
+    with np.errstate(invalid="ignore"):
+        voltage_avg_spectrum = np.nanmean(heatmap, axis=0)
+    heatmap_diff = heatmap - voltage_avg_spectrum[None, :]
+    m = np.nanmax(np.abs(heatmap_diff))
+    symlog_norm = mcolors.SymLogNorm(linthresh=10.0, vmin=-m, vmax=m)
+
+    fig, ax = plt.subplots(figsize=(11, 8))
+    cmap_rb = plt.get_cmap("RdBu_r").copy()
+    cmap_rb.set_bad("lightgray")
+    mesh = ax.pcolormesh(e_edges, y_edges, np.ma.masked_invalid(heatmap_diff),
+                         shading="flat", cmap=cmap_rb, norm=symlog_norm)
+    decorate_folded(ax)
+    ax.set_xlabel("Binding energy (eV, corrected, original range)")
+    ax.set_title(f"{region_name} differential heatmap (voltage-averaged spectrum subtracted per row, sym-log)")
+    ax.invert_xaxis()
+    fig.colorbar(mesh, ax=ax, label="counts/s - voltage-avg spectrum (sym-log)")
+    fig.tight_layout()
+    f1c = OUT_PREFIX + "_heatmap_corrected_folded_diff.png"
+    fig.savefig(f1c, dpi=150); plt.close(fig)
+    print(f"Saved {f1c}")
+
 
     # --- plot 3: per-channel corrected spectra (kept only) ---
     norm = Normalize(vmin=min(kept), vmax=max(kept))
