@@ -121,7 +121,7 @@ def main():
             t = float(row[it])
             c = float(row[ic])
             y = fold_y(v, t)
-            y_bin = round(y / V_BIN) * V_BIN
+            y_bin = round(round(y / V_BIN) * V_BIN, 2)  # round to avoid float mismatch
             key = (ch, y_bin, e)
             if key in sums:
                 sums[key][0] += c; sums[key][1] += 1
@@ -144,8 +144,8 @@ def main():
     e_grid = np.arange(np.floor(e_min / E_GRID_STEP) * E_GRID_STEP,
                        e_max + E_GRID_STEP, E_GRID_STEP)
     n_e = len(e_grid)
-    y_vals = sorted(set(round(k[1], 2) for k in sums.keys()))
-    y_vals = np.array(y_vals)
+    # y_vals only from KEPT channels (avoid empty rows from cut channels)
+    y_vals = np.array(sorted(set(round(k[1], 2) for k in sums.keys() if k[0] in kept)))
     n_y = len(y_vals)
     print(f"Corrected grid: {e_grid[0]:.1f}..{e_grid[-1]:.1f} eV ({n_e} pts, original range)")
     print(f"Folded y bins: {n_y} ({y_vals[0]:.2f}..{y_vals[-1]:.2f})")
