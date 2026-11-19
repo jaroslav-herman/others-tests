@@ -36,7 +36,11 @@ Y_SHIFT = 0.2  # counts/s vertical offset between consecutive channels
 
 
 def parse_xy_channels(filename):
-    """Parse FixedEnergies .xy with per-region binding energy and channel scans.
+    """Parse FixedEnergies or FixedAnalyzerTransmission .xy with channel-split scans.
+    
+    For FixedEnergies: Region line has binding energy, data rows are 'index counts/s ErrorBar'
+    For FixedAnalyzerTransmission: Region line has no energy, data rows are 'energy counts/s ErrorBar'
+    
     Return (channels, energies, matrix[ch_idx, e_idx] = mean counts/s, region_name)."""
     channels, energies = [], []
     seen_ch, seen_e = set(), set()
@@ -45,10 +49,17 @@ def parse_xy_channels(filename):
     scan_channel = None
     in_scan = False
     region_name = ""
+    col_energy_first = False
 
     with open(filename, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.strip()
+            
+            # Check for column labels to detect format
+            if line.startswith("# ColumnLabels:") and "energy" in line.lower():
+                col_energy_first = True
+                continue
+            
             m = re.match(
                 r"#\s*Cycle:\s*\d+\s*,\s*Curve:\s*\d+\s*,\s*Scan:\s*(\d+)"
                 r"(?:\s*,\s*Channel:\s*(\d+))?\s*$", line)
@@ -63,10 +74,14 @@ def parse_xy_channels(filename):
                 binding_energy = float(em.group(2)) if em else None
                 if em:
                     region_name = em.group(1)
+                else:
+                    region_name = current_region
                 in_scan = False
                 continue
+            
+            # For FixedEnergies: data is "index counts/s ErrorBar" with binding_energy from Region
             m = re.match(r"^(\d+)\s+([-+0-9.Ee]+)\s+([-+0-9.Ee]+)\s*$", line)
-            if m and in_scan and binding_energy is not None:
+            if m and in_scan and binding_energy is not None and not col_energy_first:
                 counts = float(m.group(2))
                 ch, e = scan_channel, binding_energy
                 if ch not in seen_ch:
@@ -74,6 +89,22 @@ def parse_xy_channels(filename):
                 if e not in seen_e:
                     seen_e.add(e); energies.append(e)
                 key = (ch, e)
+                if key in sums:
+                    sums[key][0] += counts; sums[key][1] += 1
+                else:
+                    sums[key] = [counts, 1]
+            
+            # For FixedAnalyzerTransmission: data is "energy counts/s ErrorBar"
+            m = re.match(r"^([-+0-9.Ee]+)\s+([-+0-9.Ee]+)\s+([-+0-9.Ee]+)\s*$", line)
+            if m and in_scan and scan_channel is not None and col_energy_first:
+                energy = float(m.group(1))
+                counts = float(m.group(2))
+                ch = scan_channel
+                if ch not in seen_ch:
+                    seen_ch.add(ch); channels.append(ch)
+                if energy not in seen_e:
+                    seen_e.add(energy); energies.append(energy)
+                key = (ch, energy)
                 if key in sums:
                     sums[key][0] += counts; sums[key][1] += 1
                 else:
