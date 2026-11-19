@@ -1,15 +1,15 @@
 """
-Apply the Au-derived per-channel energy correction to Ir 4f CV-XPS data.
+Apply Au-derived energy correction to Ir 4f CV-XPS, with folded voltage axis
+and low-signal channel cutting.
 
-Loads the correction shifts from the Au reference corrections CSV, applies them
-to each channel's energy axis in the Ir 4f correlated CSV (12_CV.mpt + channel
-XPS), interpolates all corrected channel spectra onto a common energy grid, and
-produces:
-  1. heatmap of corrected BE vs voltage (averaged over channels per voltage bin)
-  2. voltage-averaged corrected spectra per channel (y-shifted, color gradient)
-  3. overall corrected spectrum averaged over channels and voltages
+1. Load per-channel energy shifts from Au reference corrections CSV.
+2. Load Ir 4f correlated CSV; determine up/down sweep direction from voltage
+   vs time gradient; fold voltage axis (up 0.6->1.8, down continues 1.8->3.0).
+3. Cut channels with low signal (amplitude < threshold = max(mean-2std, p10)).
+4. Interpolate corrected spectra onto common grid limited to original BE range.
+5. Outputs: folded heatmap, per-channel corrected spectra, overall average.
 
-Usage: python CVXPS-apply-correction-ir.py [ir_correlated_csv] [au_corr_csv] [out_prefix]
+Usage: python CVXPS-apply-correction-ir.py [ir_csv] [au_corr_csv] [out_prefix]
 """
 
 import csv
@@ -22,6 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import Normalize
+from bisect import bisect_left
 
 IR_CSV = (sys.argv[1] if len(sys.argv) > 1 else
           r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\channel_ranges\ch0-145\12_CV_ch0-145_XPS_correlated.csv")
@@ -30,9 +31,11 @@ AU_CORR_CSV = (sys.argv[2] if len(sys.argv) > 2 else
 OUT_PREFIX = (sys.argv[3] if len(sys.argv) > 3 else
               r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\channel_ranges\ch0-145\12_CV_Ir4f_corrected")
 
-Y_SHIFT = 0.5   # for per-channel plot
-V_BIN = 0.05    # voltage bin width for heatmap
-E_GRID_STEP = 0.1  # common corrected energy grid step (eV)
+Y_SHIFT = 0.5
+V_LO, V_HI = 0.6, 1.8   # CV vertices
+V_BIN = 0.02            # voltage bin width
+E_GRID_STEP = 0.1
+DV_THRESHOLD = 1e-3
 
 
 def load_corrections(csv_file):
@@ -40,205 +43,246 @@ def load_corrections(csv_file):
     with open(csv_file, "r", newline="") as f:
         r = csv.reader(f)
         header = next(r)
-        i_ch = header.index("channel")
-        i_corr = header.index("correction_eV")
         for row in r:
-            corr[int(row[i_ch])] = float(row[i_corr])
+            corr[int(row[header.index("channel")])] = float(row[header.index("correction_eV")])
     return corr
+
+
+def interpolate(x, xs, ys):
+    if x <= xs[0]: return ys[0]
+    if x >= xs[-1]: return ys[-1]
+    i = bisect_left(xs, x)
+    x0, x1 = xs[i-1], xs[i]
+    y0, y1 = ys[i-1], ys[i]
+    if x1 == x0: return y0
+    return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 
 
 def main():
     corrections = load_corrections(AU_CORR_CSV)
-    print(f"Loaded {len(corrections)} channel corrections from Au reference")
+    print(f"Loaded {len(corrections)} channel corrections")
 
-    # --- pass 1: collect raw energies, channels, voltages ---
+    # --- pass 1: collect structure + determine sweep direction ---
     channels = []
     seen_ch = set()
     raw_energies = set()
-    voltages = set()
     region_name = ""
+    cv_t, cv_v = [], []  # for sweep direction
 
     with open(IR_CSV, "r", encoding="utf-8", newline="") as f:
         reader = csv.reader(row for row in f if not row.startswith("#"))
         header = next(reader)
-        i_v = header.index("voltage_Ewe_V")
-        i_e = header.index("binding_energy_eV")
-        i_ch = header.index("channel")
-        i_r = header.index("region")
+        iv, ie, ic, ich, ir, it = (header.index(c) for c in
+            ["voltage_Ewe_V", "binding_energy_eV", "counts_s", "channel", "region", "cv_time_s"])
+        seen_tv = set()
         for row in reader:
-            ch = int(row[i_ch])
+            ch = int(row[ich])
             if ch not in seen_ch:
                 seen_ch.add(ch); channels.append(ch)
-            raw_energies.add(float(row[i_e]))
-            voltages.add(round(float(row[i_v]) / V_BIN) * V_BIN)
+            raw_energies.add(float(row[ie]))
             if not region_name:
-                region_name = " ".join(row[i_r].split()[:-1])
+                region_name = " ".join(row[ir].split()[:-1])
+            tv = (float(row[it]), float(row[iv]))
+            if tv not in seen_tv:
+                seen_tv.add(tv)
+                cv_t.append(tv[0]); cv_v.append(tv[1])
 
     channels.sort()
     raw_energies = np.array(sorted(raw_energies))
-    voltages = np.array(sorted(voltages))
     n_ch = len(channels)
-    n_v = len(voltages)
 
-    # common corrected energy grid
-    e_min = raw_energies.min() + min(corrections.values())
-    e_max = raw_energies.max() + max(corrections.values())
-    e_grid = np.arange(np.floor(e_min / E_GRID_STEP) * E_GRID_STEP,
-                       e_max + E_GRID_STEP, E_GRID_STEP)
-    n_e = len(e_grid)
-    print(f"Ir data: {n_ch} channels, raw BE {raw_energies[0]:g}..{raw_energies[-1]:g} eV, "
-          f"{n_v} voltage bins, corrected grid {e_grid[0]:.1f}..{e_grid[-1]:.1f} eV ({n_e} pts)")
-    print(f"Region: {region_name}")
+    # sweep direction from voltage gradient
+    cv_t = np.array(cv_t); cv_v = np.array(cv_v)
+    order = np.argsort(cv_t)
+    cv_t, cv_v = cv_t[order], cv_v[order]
+    grad = np.gradient(cv_v, cv_t)
+    direction = np.where(grad > DV_THRESHOLD, 1, np.where(grad < -DV_THRESHOLD, -1, 1))
 
-    # --- pass 2: accumulate per (channel, voltage_bin, raw_energy) ---
-    # sums[(ch, v_bin, raw_e)] = [sum_counts, n]
+    # folded y: up -> V, down -> 2*V_HI - V
+    def fold_y(v, t):
+        i = bisect_left(cv_t, t)
+        i = min(max(i, 0), len(direction)-1)
+        d = direction[i]
+        return v if d > 0 else 2 * V_HI - v
+
+    # --- pass 2: accumulate ---
+    # sums[(ch, y_bin, raw_e)] = [sum, n]
     sums = {}
+    ch_amp = {}  # channel -> max counts (signal proxy)
     with open(IR_CSV, "r", encoding="utf-8", newline="") as f:
         reader = csv.reader(row for row in f if not row.startswith("#"))
         header = next(reader)
-        i_v = header.index("voltage_Ewe_V")
-        i_e = header.index("binding_energy_eV")
-        i_c = header.index("counts_s")
-        i_ch = header.index("channel")
+        iv, ie, ic, ich, it = (header.index(c) for c in
+            ["voltage_Ewe_V", "binding_energy_eV", "counts_s", "channel", "cv_time_s"])
         for row in reader:
-            ch = int(row[i_ch])
-            e = float(row[i_e])
-            v = round(float(row[i_v]) / V_BIN) * V_BIN
-            c = float(row[i_c])
-            key = (ch, v, e)
+            ch = int(row[ich])
+            e = float(row[ie])
+            v = float(row[iv])
+            t = float(row[it])
+            c = float(row[ic])
+            y = fold_y(v, t)
+            y_bin = round(y / V_BIN) * V_BIN
+            key = (ch, y_bin, e)
             if key in sums:
                 sums[key][0] += c; sums[key][1] += 1
             else:
                 sums[key] = [c, 1]
-    print(f"Accumulated {len(sums)} (ch, V, E) cells")
+            if ch not in ch_amp or c > ch_amp[ch]:
+                ch_amp[ch] = c
 
-    # --- build per-channel voltage-averaged corrected spectra on common grid ---
-    ch_spectra = np.full((n_ch, n_e), np.nan)  # voltage-averaged, corrected, on grid
-    heatmap = np.zeros((n_v, n_e))
-    heatmap_n = np.zeros((n_v, n_e))
+    # --- cut low-signal channels ---
+    amp_arr = np.array([ch_amp.get(ch, 0) for ch in channels])
+    mean_a, std_a = np.mean(amp_arr), np.std(amp_arr)
+    threshold = max(mean_a - 2 * std_a, np.percentile(amp_arr, 10))
+    kept = [ch for ch in channels if ch_amp.get(ch, 0) >= threshold]
+    cut = [ch for ch in channels if ch not in kept]
+    print(f"Channel amplitude: mean={mean_a:.2f}, std={std_a:.2f}, threshold={threshold:.2f}")
+    print(f"Kept {len(kept)}, cut {len(cut)}: {cut}")
+
+    # --- common corrected energy grid limited to ORIGINAL BE range ---
+    e_min, e_max = raw_energies.min(), raw_energies.max()
+    e_grid = np.arange(np.floor(e_min / E_GRID_STEP) * E_GRID_STEP,
+                       e_max + E_GRID_STEP, E_GRID_STEP)
+    n_e = len(e_grid)
+    y_vals = sorted(set(round(k[1], 2) for k in sums.keys()))
+    y_vals = np.array(y_vals)
+    n_y = len(y_vals)
+    print(f"Corrected grid: {e_grid[0]:.1f}..{e_grid[-1]:.1f} eV ({n_e} pts, original range)")
+    print(f"Folded y bins: {n_y} ({y_vals[0]:.2f}..{y_vals[-1]:.2f})")
+
+    # --- build matrices ---
+    ch_spectra = np.full((n_ch, n_e), np.nan)   # voltage-averaged per channel
+    heatmap = np.zeros((n_y, n_e))
+    heatmap_n = np.zeros((n_y, n_e))
 
     for ci, ch in enumerate(channels):
-        shift = corrections.get(ch, 0.0)
-        # raw energies for this channel
-        ch_raw_e = []
-        ch_vals_per_v = {}  # v_bin -> (raw_e array, counts array)
-        for (c, v, e), (s, n) in sums.items():
-            if c == ch:
-                ch_raw_e.append(e)
-                ch_vals_per_v.setdefault(v, ([], []))
-                ch_vals_per_v[v][0].append(e)
-                ch_vals_per_v[v][1].append(s / n)
-        if not ch_raw_e:
+        if ch not in kept:
             continue
-        ch_raw_e = np.array(sorted(set(ch_raw_e)))
-        # voltage-averaged spectrum on raw energy axis
-        v_avg_raw = np.zeros(len(ch_raw_e))
-        v_cnt = np.zeros(len(ch_raw_e))
-        for v, (es, cs) in ch_vals_per_v.items():
-            es = np.array(es); cs = np.array(cs)
-            for ei, e in enumerate(ch_raw_e):
-                mask = es == e
+        shift = corrections.get(ch, 0.0)
+        # collect per-y-bin spectra on raw energy axis
+        per_y = {}
+        for (c, yb, e), (s, n) in sums.items():
+            if c == ch:
+                per_y.setdefault(yb, {})
+                per_y[yb][e] = per_y[yb].get(e, [0.0, 0])
+                per_y[yb][e][0] += s; per_y[yb][e][1] += n
+        if not per_y:
+            continue
+        # voltage-averaged raw spectrum
+        all_e = sorted(set(e for yb in per_y for e in per_y[yb]))
+        raw_e = np.array(all_e)
+        v_avg = np.zeros(len(raw_e))
+        v_cnt = np.zeros(len(raw_e))
+        for yb, ed in per_y.items():
+            es = np.array(sorted(ed.keys()))
+            cs = np.array([ed[e][0]/ed[e][1] for e in es])
+            for e_val in raw_e:
+                mask = es == e_val
                 if mask.any():
-                    v_avg_raw[ei] += cs[mask].mean()
-                    v_cnt[ei] += 1
-        v_avg_raw = np.where(v_cnt > 0, v_avg_raw / np.maximum(v_cnt, 1), np.nan)
-        # corrected energies and interpolate onto common grid
-        e_corr = ch_raw_e + shift
-        order = np.argsort(e_corr)
-        ch_spectra[ci] = np.interp(e_grid, e_corr[order], v_avg_raw[order],
-                                   left=np.nan, right=np.nan)
-
-        # heatmap: for each voltage bin, corrected spectrum on grid
-        for vi, v in enumerate(voltages):
-            if v in ch_vals_per_v:
-                es, cs = ch_vals_per_v[v]
-                es = np.array(es); cs = np.array(cs)
-                # average duplicates
-                u_e, inv = np.unique(es, return_inverse=True)
-                cs_avg = np.zeros(len(u_e))
-                np.add.at(cs_avg, inv, cs)
-                cnt = np.bincount(inv)
-                cs_avg /= cnt
-                e_corr_v = u_e + shift
-                order = np.argsort(e_corr_v)
-                h = np.interp(e_grid, e_corr_v[order], cs_avg[order],
-                              left=np.nan, right=np.nan)
+                    idx = np.where(raw_e == e_val)[0][0]
+                    v_avg[idx] += cs[mask].mean()
+                    v_cnt[idx] += 1
+        v_avg = np.where(v_cnt > 0, v_avg / np.maximum(v_cnt, 1), np.nan)
+        # correct and interpolate
+        e_corr = raw_e + shift
+        o = np.argsort(e_corr)
+        ch_spectra[ci] = np.interp(e_grid, e_corr[o], v_avg[o], left=np.nan, right=np.nan)
+        # heatmap per y bin
+        for yi, yb in enumerate(y_vals):
+            if yb in per_y:
+                ed = per_y[yb]
+                es = np.array(sorted(ed.keys()))
+                cs = np.array([ed[e][0]/ed[e][1] for e in es])
+                e_c = es + shift
+                o = np.argsort(e_c)
+                h = np.interp(e_grid, e_c[o], cs[o], left=np.nan, right=np.nan)
                 valid = ~np.isnan(h)
-                heatmap[vi, valid] += h[valid]
-                heatmap_n[vi, valid] += 1
+                heatmap[yi, valid] += h[valid]
+                heatmap_n[yi, valid] += 1
 
     heatmap = np.where(heatmap_n > 0, heatmap / np.maximum(heatmap_n, 1), np.nan)
 
-    # --- plot 1: heatmap corrected BE vs voltage ---
+    # --- plot 1: amplitude vs channel with cut ---
+    fig, ax = plt.subplots(figsize=(12, 5))
+    colors = ["green" if ch in kept else "red" for ch in channels]
+    ax.scatter(channels, [ch_amp.get(ch, 0) for ch in channels], c=colors, s=20, alpha=0.7)
+    ax.axhline(threshold, color="black", ls="--", lw=1.5, label=f"threshold={threshold:.2f}")
+    ax.set_xlabel("Channel"); ax.set_ylabel("Max counts/s")
+    ax.set_title(f"Channel signal (green=kept {len(kept)}, red=cut {len(cut)})")
+    ax.legend(); ax.grid(alpha=0.3)
+    fig.tight_layout()
+    f0 = OUT_PREFIX + "_channel_amplitudes.png"
+    fig.savefig(f0, dpi=150); plt.close(fig)
+    print(f"Saved {f0}")
+
+    # --- plot 2: folded heatmap ---
     fig, ax = plt.subplots(figsize=(11, 8))
     e_edges = np.concatenate([e_grid - E_GRID_STEP/2, [e_grid[-1] + E_GRID_STEP/2]])
-    v_edges = np.concatenate([voltages - V_BIN/2, [voltages[-1] + V_BIN/2]])
-    mesh = ax.pcolormesh(e_edges, v_edges, np.ma.masked_invalid(heatmap),
+    y_edges = np.concatenate([y_vals - V_BIN/2, [y_vals[-1] + V_BIN/2]])
+    mesh = ax.pcolormesh(e_edges, y_edges, np.ma.masked_invalid(heatmap),
                          shading="flat", cmap="magma")
-    ax.set_xlabel("Binding energy (eV, corrected with Au reference)")
-    ax.set_ylabel("Potential Ewe (V)")
-    ax.set_title(f"{region_name} heatmap: corrected BE vs voltage (avg over channels)")
+    ax.axhline(V_HI, color="white", lw=0.8, ls="--", alpha=0.7)
+    ax.set_ylim(V_LO, 2 * V_HI - V_LO)
+    ticks = np.arange(V_LO, 2 * V_HI - V_LO + 1e-9, 0.2)
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([f"{v:.1f}" if v <= V_HI + 1e-9 else f"{2*V_HI - v:.1f}" for v in ticks])
+    ax.set_xlabel("Binding energy (eV, corrected, original range)")
+    ax.set_ylabel("Potential Ewe (V) (up-sweep, then down-sweep)")
+    ax.set_title(f"{region_name} corrected heatmap (folded voltage, {len(kept)} channels)")
     ax.invert_xaxis()
+    ax.annotate("up", xy=(0.02, 0.28), xycoords="axes fraction", color="white")
+    ax.annotate("down", xy=(0.02, 0.72), xycoords="axes fraction", color="white")
     fig.colorbar(mesh, ax=ax, label="counts/s")
     fig.tight_layout()
-    f1 = OUT_PREFIX + "_heatmap_corrected.png"
-    fig.savefig(f1, dpi=150)
-    plt.close(fig)
+    f1 = OUT_PREFIX + "_heatmap_corrected_folded.png"
+    fig.savefig(f1, dpi=150); plt.close(fig)
     print(f"Saved {f1}")
 
-    # --- plot 2: voltage-averaged corrected spectra per channel ---
-    norm = Normalize(vmin=channels[0], vmax=channels[-1])
+    # --- plot 3: per-channel corrected spectra (kept only) ---
+    norm = Normalize(vmin=min(kept), vmax=max(kept))
     cmap = plt.get_cmap("viridis")
-
     fig, ax = plt.subplots(figsize=(13, 10))
     for ci, ch in enumerate(channels):
+        if ch not in kept:
+            continue
         y = ch_spectra[ci] + ci * Y_SHIFT
-        color = cmap(norm(ch))
-        ax.plot(e_grid, y, "-", lw=1.0, color=color, alpha=0.85)
-
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, pad=0.02)
-    cbar.set_label("Channel")
-    ax.set_xlabel("Binding energy (eV, corrected with Au reference)")
-    ax.set_ylabel(f"counts/s (voltage-averaged, corrected) + {Y_SHIFT:g} x channel index")
-    ax.set_title(f"{region_name} voltage-averaged corrected spectra per channel")
-    ax.invert_xaxis()
-    ax.grid(alpha=0.3)
+        ax.plot(e_grid, y, "-", lw=1.0, color=cmap(norm(ch)), alpha=0.85)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm); sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.02); cbar.set_label("Channel")
+    ax.set_xlabel("Binding energy (eV, corrected, original range)")
+    ax.set_ylabel(f"counts/s (voltage-averaged) + {Y_SHIFT:g} x channel idx")
+    ax.set_title(f"{region_name} corrected spectra per kept channel ({len(kept)} ch)")
+    ax.invert_xaxis(); ax.grid(alpha=0.3)
     fig.tight_layout()
     f2 = OUT_PREFIX + "_channel_spectra_corrected.png"
-    fig.savefig(f2, dpi=150)
-    plt.close(fig)
+    fig.savefig(f2, dpi=150); plt.close(fig)
     print(f"Saved {f2}")
 
-    # --- plot 3: overall average ---
-    overall = np.nanmean(ch_spectra, axis=0)
-    overall_std = np.nanstd(ch_spectra, axis=0)
-
+    # --- plot 4: overall average ---
+    kept_idx = [channels.index(ch) for ch in kept]
+    overall = np.nanmean(ch_spectra[kept_idx], axis=0)
+    overall_std = np.nanstd(ch_spectra[kept_idx], axis=0)
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(e_grid, overall, "-", lw=2.5, color="darkblue",
-            label="corrected spectrum (avg over channels + voltages)")
+            label=f"corrected avg ({len(kept)} channels x all voltages)")
     ax.fill_between(e_grid, overall - overall_std, overall + overall_std,
-                    alpha=0.2, color="blue", label="±1 std across channels")
-    ax.set_xlabel("Binding energy (eV, corrected)")
+                    alpha=0.2, color="blue", label="±1 std")
+    ax.set_xlabel("Binding energy (eV, corrected, original range)")
     ax.set_ylabel("counts/s")
-    ax.set_title(f"{region_name} corrected averaged spectrum (Au energy calibration applied)")
-    ax.invert_xaxis()
-    ax.legend()
-    ax.grid(alpha=0.3)
+    ax.set_title(f"{region_name} corrected averaged spectrum")
+    ax.invert_xaxis(); ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout()
     f3 = OUT_PREFIX + "_overall_corrected.png"
-    fig.savefig(f3, dpi=150)
-    plt.close(fig)
+    fig.savefig(f3, dpi=150); plt.close(fig)
     print(f"Saved {f3}")
 
-    # --- save CSV ---
+    # --- CSV ---
     csv_out = OUT_PREFIX + "_overall_corrected.csv"
     with open(csv_out, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["binding_energy_eV", "counts_s_mean", "counts_s_std"])
+        w.writerow(["binding_energy_eV", "counts_s_mean", "counts_s_std", "n_channels"])
         for i, e in enumerate(e_grid):
-            w.writerow([f"{e:.4f}", f"{overall[i]:.6f}", f"{overall_std[i]:.6f}"])
+            w.writerow([f"{e:.4f}", f"{overall[i]:.6f}", f"{overall_std[i]:.6f}", len(kept)])
     print(f"Saved {csv_out}")
 
 
