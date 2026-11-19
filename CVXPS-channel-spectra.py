@@ -28,7 +28,7 @@ OUT_PNG = (sys.argv[2] if len(sys.argv) > 2 else os.path.join(
     os.path.dirname(CORRELATED_CSV),
     os.path.splitext(os.path.basename(CORRELATED_CSV))[0] + "_channel_spectra.png"))
 
-Y_SHIFT = 50.0  # counts/s vertical offset between consecutive channels
+Y_SHIFT = 2.0  # counts/s vertical offset between consecutive channels
 
 
 def load_and_average(path):
