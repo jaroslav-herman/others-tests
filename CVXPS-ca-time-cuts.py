@@ -214,6 +214,13 @@ def main():
     ax.set_xlabel("Binding energy (eV, corrected)")
     ax.set_ylabel(f"Time within cycle (s)")
     ax.set_title(f"{region_name} time heatmap with time-cut energies marked (cyan)")
+    # visible grid: vertical at each 1 eV, horizontal at each 5 s
+    for ev in range(int(np.floor(e_grid[-1])), int(np.ceil(e_grid[0])) + 1):
+        ax.axvline(ev, color="white", lw=0.5, alpha=0.35, zorder=5)
+    for tv in range(0, int(CYCLE_PERIOD_S) + 1, 5):
+        ax.axhline(tv, color="white", lw=0.5, alpha=0.35, zorder=5)
+    ax.set_xticks(np.arange(int(np.floor(e_grid[-1])), int(np.ceil(e_grid[0])) + 1, 1))
+    ax.set_yticks(np.arange(0, CYCLE_PERIOD_S + 1, 5))
     fig.colorbar(mesh, ax=ax, label="counts/s")
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap_with_cuts.png")

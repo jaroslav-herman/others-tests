@@ -238,6 +238,23 @@ def main():
     e_edges = np.concatenate([e_grid - E_GRID_STEP / 2, [e_grid[-1] + E_GRID_STEP / 2]])
     t_edges = np.concatenate([t_vals - TIME_BIN_S / 2, [t_vals[-1] + TIME_BIN_S / 2]])
 
+    def add_heatmap_grid(ax, e_grid, t_vals, cycle_period, color="white", alpha=0.35):
+        """Draw visible grid lines on a heatmap: vertical at each 1 eV, horizontal at each 5 s."""
+        # vertical grid lines at integer eV
+        e_lo, e_hi = e_grid[-1], e_grid[0]  # x is inverted
+        for ev in range(int(np.floor(e_lo)), int(np.ceil(e_hi)) + 1):
+            ax.axvline(ev, color=color, lw=0.5, alpha=alpha, zorder=5)
+        # horizontal grid lines at each 5 s
+        for tv in range(0, int(cycle_period) + 1, 5):
+            ax.axhline(tv, color=color, lw=0.5, alpha=alpha, zorder=5)
+        # also minor: every 1 s horizontal (lighter)
+        for tv in range(0, int(cycle_period) + 1, 1):
+            if tv % 5 != 0:
+                ax.axhline(tv, color=color, lw=0.25, alpha=alpha * 0.5, zorder=5)
+        # set ticks to match grid
+        ax.set_xticks(np.arange(int(np.floor(e_lo)), int(np.ceil(e_hi)) + 1, 1))
+        ax.set_yticks(np.arange(0, cycle_period + 1, 5))
+
     # ========== PLOT 1: channel amplitudes ==========
     fig, ax = plt.subplots(figsize=(12, 5))
     colors = ["green" if ch in kept else "red" for ch in channels]
@@ -265,6 +282,7 @@ def main():
     ax.set_ylabel(f"Time within cycle (s, 0-{CYCLE_PERIOD_S:.0f} s)")
     ax.set_title(f"{region_name} time-resolved heatmap (corrected, {len(kept)} channels, "
                  f"{len(scan_info)} scans averaged into 0-{CYCLE_PERIOD_S:.0f} s)")
+    add_heatmap_grid(ax, e_grid, t_vals, CYCLE_PERIOD_S)
     fig.colorbar(mesh, ax=ax, label="counts/s")
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap.png")
@@ -286,6 +304,7 @@ def main():
     ax.set_xlabel("Binding energy (eV, corrected)")
     ax.set_ylabel(f"Time within cycle (s)")
     ax.set_title(f"{region_name} time heatmap row-normalized to row max")
+    add_heatmap_grid(ax, e_grid, t_vals, CYCLE_PERIOD_S)
     fig.colorbar(mesh, ax=ax, label="counts/s / row max")
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap_norm.png")
@@ -310,6 +329,7 @@ def main():
     ax.set_xlabel("Binding energy (eV, corrected)")
     ax.set_ylabel(f"Time within cycle (s)")
     ax.set_title(f"{region_name} differential time heatmap (time-avg spectrum subtracted, sym-log)")
+    add_heatmap_grid(ax, e_grid, t_vals, CYCLE_PERIOD_S, color="gray", alpha=0.4)
     fig.colorbar(mesh, ax=ax, label="counts/s - time-avg (sym-log)")
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap_diff.png")
@@ -336,6 +356,7 @@ def main():
         ax.set_xlabel("Binding energy (eV, corrected)")
         ax.set_ylabel(f"Time within cycle (s)")
         ax.set_title(f"{region_name} time heatmap, smoothed over {window} bins ({window * TIME_BIN_S:.1f} s)")
+        add_heatmap_grid(ax, e_grid, t_vals, CYCLE_PERIOD_S)
         fig.colorbar(mesh, ax=ax, label="counts/s (smoothed)")
         fig.tight_layout()
         save_fig(fig, OUT_PREFIX + f"_time_heatmap_smooth{window}.png")
@@ -396,6 +417,7 @@ def main():
     ax2.set_ylim(0, CYCLE_PERIOD_S)
     ax2.legend(loc="upper right")
     ax.set_title(f"{region_name} time heatmap with interpolated Ewe overlay")
+    add_heatmap_grid(ax, e_grid, t_vals, CYCLE_PERIOD_S)
     fig.colorbar(mesh, ax=ax, label="counts/s", pad=0.12)
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap_voltage.png")
