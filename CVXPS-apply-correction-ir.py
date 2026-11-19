@@ -15,6 +15,7 @@ Usage: python CVXPS-apply-correction-ir.py [ir_csv] [au_corr_csv] [out_prefix]
 import csv
 import os
 import sys
+import time
 
 import matplotlib
 
@@ -37,6 +38,20 @@ V_LO, V_HI = 0.6, 1.8   # CV vertices
 V_BIN = 0.02            # voltage bin width
 E_GRID_STEP = 0.1
 DV_THRESHOLD = 1e-3
+
+
+def save_fig(fig, out_file):
+    """Save with retry (OneDrive occasionally locks the file briefly)."""
+    for attempt in range(5):
+        try:
+            fig.savefig(out_file, dpi=150)
+            break
+        except OSError:
+            if attempt == 4:
+                raise
+            time.sleep(2)
+    plt.close(fig)
+    print(f"Saved {out_file}")
 
 
 def load_corrections(csv_file):
@@ -213,8 +228,7 @@ def main():
     ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout()
     f0 = OUT_PREFIX + "_channel_amplitudes.png"
-    fig.savefig(f0, dpi=150); plt.close(fig)
-    print(f"Saved {f0}")
+    save_fig(fig, f0)
 
     # --- plot 2: folded heatmap ---
     fig, ax = plt.subplots(figsize=(11, 8))
@@ -236,8 +250,7 @@ def main():
     fig.colorbar(mesh, ax=ax, label="counts/s")
     fig.tight_layout()
     f1 = OUT_PREFIX + "_heatmap_corrected_folded.png"
-    fig.savefig(f1, dpi=150); plt.close(fig)
-    print(f"Saved {f1}")
+    save_fig(fig, f1)
 
     # --- helper: folded-y axis decorations ---
     def decorate_folded(ax):
@@ -272,8 +285,7 @@ def main():
     fig.colorbar(mesh, ax=ax, label=f"counts/s normalized to mean of {e_grid[-1]-1:.1f}-{e_grid[-1]:.1f} eV")
     fig.tight_layout()
     f1b = OUT_PREFIX + "_heatmap_corrected_folded_norm_maxBE.png"
-    fig.savefig(f1b, dpi=150); plt.close(fig)
-    print(f"Saved {f1b}")
+    save_fig(fig, f1b)
 
     # --- plot 2c: differential heatmap (subtract voltage-averaged spectrum per row) ---
     with np.errstate(invalid="ignore"):
@@ -294,8 +306,35 @@ def main():
     fig.colorbar(mesh, ax=ax, label="counts/s - voltage-avg spectrum (sym-log)")
     fig.tight_layout()
     f1c = OUT_PREFIX + "_heatmap_corrected_folded_diff.png"
-    fig.savefig(f1c, dpi=150); plt.close(fig)
-    print(f"Saved {f1c}")
+    save_fig(fig, f1c)
+
+    # --- plot 2d: voltage-smoothed heatmaps at different averaging levels ---
+    def smooth_y(matrix, window):
+        """Moving average along y (voltage) axis with given odd window size."""
+        if window <= 1:
+            return matrix.copy()
+        pad = window // 2
+        padded = np.pad(matrix, ((pad, pad), (0, 0)), mode="edge")
+        kernel = np.ones(window) / window
+        smoothed = np.apply_along_axis(
+            lambda col: np.convolve(col, kernel, mode="valid"), 0, padded)
+        return smoothed
+
+    for window in (3, 5, 9, 15):
+        h_smooth = smooth_y(heatmap, window)
+        fig, ax = plt.subplots(figsize=(11, 8))
+        mesh = ax.pcolormesh(e_edges, y_edges, np.ma.masked_invalid(h_smooth),
+                             shading="flat", cmap="magma")
+        decorate_folded(ax)
+        ax.set_xlabel("Binding energy (eV, corrected, original range)")
+        ax.set_title(f"{region_name} corrected heatmap, voltage-averaged over "
+                     f"{window} bins ({window*V_BIN:.2f} V)")
+        ax.invert_xaxis()
+        fig.colorbar(mesh, ax=ax, label="counts/s (smoothed)")
+        fig.tight_layout()
+        f1d = OUT_PREFIX + f"_heatmap_corrected_folded_smooth{window}.png"
+        save_fig(fig, f1d)
+
 
 
     # --- plot 3: per-channel corrected spectra (kept only) ---
@@ -315,8 +354,7 @@ def main():
     ax.invert_xaxis(); ax.grid(alpha=0.3)
     fig.tight_layout()
     f2 = OUT_PREFIX + "_channel_spectra_corrected.png"
-    fig.savefig(f2, dpi=150); plt.close(fig)
-    print(f"Saved {f2}")
+    save_fig(fig, f2)
 
     # --- plot 4: overall average ---
     kept_idx = [channels.index(ch) for ch in kept]
@@ -333,8 +371,7 @@ def main():
     ax.invert_xaxis(); ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout()
     f3 = OUT_PREFIX + "_overall_corrected.png"
-    fig.savefig(f3, dpi=150); plt.close(fig)
-    print(f"Saved {f3}")
+    save_fig(fig, f3)
 
     # --- CSV ---
     csv_out = OUT_PREFIX + "_overall_corrected.csv"
