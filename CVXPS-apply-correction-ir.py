@@ -9,7 +9,7 @@ and low-signal channel cutting.
 4. Interpolate corrected spectra onto common grid limited to original BE range.
 5. Outputs: folded heatmap, per-channel corrected spectra, overall average.
 
-Usage: python CVXPS-apply-correction-ir.py [ir_csv] [au_corr_csv] [out_prefix]
+Usage: python CVXPS-apply-correction-ir.py [ir_csv] [au_corr_csv] [out_prefix] [v_lo] [v_hi]
 """
 
 import csv
@@ -33,8 +33,11 @@ AU_CORR_CSV = (sys.argv[2] if len(sys.argv) > 2 else
 OUT_PREFIX = (sys.argv[3] if len(sys.argv) > 3 else
               r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\channel_ranges\ch0-145\12_CV_Ir4f_corrected")
 
+# Optional CV voltage range (default 0.6-1.8V for most measurements)
+V_LO = float(sys.argv[4]) if len(sys.argv) > 4 else 0.6
+V_HI = float(sys.argv[5]) if len(sys.argv) > 5 else 1.8
+
 Y_SHIFT = 0.5
-V_LO, V_HI = 0.6, 2.2   # CV vertices (updated for 17_CV_Ir which goes to 2.2V)
 V_BIN = 0.02            # voltage bin width
 E_GRID_STEP = 0.1
 DV_THRESHOLD = 1e-3
