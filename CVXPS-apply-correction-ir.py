@@ -4,7 +4,7 @@ and low-signal channel cutting.
 
 1. Load per-channel energy shifts from Au reference corrections CSV.
 2. Load Ir 4f correlated CSV; determine up/down sweep direction from voltage
-   vs time gradient; fold voltage axis (up 0.6->1.8, down continues 1.8->3.0).
+   vs time gradient; fold voltage axis (up V_LO->V_HI, down continues V_HI->2*V_HI-V_LO).
 3. Cut channels with low signal (amplitude < threshold = max(mean-2std, p10)).
 4. Interpolate corrected spectra onto common grid limited to original BE range.
 5. Outputs: folded heatmap, per-channel corrected spectra, overall average.
@@ -34,7 +34,7 @@ OUT_PREFIX = (sys.argv[3] if len(sys.argv) > 3 else
               r"C:\Users\Herman\OneDrive - Univerzita Karlova\CVXPS\channel_ranges\ch0-145\12_CV_Ir4f_corrected")
 
 Y_SHIFT = 0.5
-V_LO, V_HI = 0.6, 1.8   # CV vertices
+V_LO, V_HI = 0.6, 2.2   # CV vertices (updated for 17_CV_Ir which goes to 2.2V)
 V_BIN = 0.02            # voltage bin width
 E_GRID_STEP = 0.1
 DV_THRESHOLD = 1e-3
