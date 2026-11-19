@@ -240,20 +240,22 @@ def main():
 
     def add_heatmap_grid(ax, e_grid, t_vals, cycle_period, color="white", alpha=0.35):
         """Draw visible grid lines on a heatmap: vertical at each 1 eV, horizontal at each 5 s."""
-        # vertical grid lines at integer eV
         e_lo, e_hi = e_grid[-1], e_grid[0]  # x is inverted
-        for ev in range(int(np.floor(e_lo)), int(np.ceil(e_hi)) + 1):
+        # vertical grid lines at integer eV
+        e_ticks = np.arange(int(np.floor(e_lo)), int(np.ceil(e_hi)) + 1, 1)
+        for ev in e_ticks:
             ax.axvline(ev, color=color, lw=0.5, alpha=alpha, zorder=5)
-        # horizontal grid lines at each 5 s
+        # horizontal grid lines: major at 5 s, minor at 1 s
         for tv in range(0, int(cycle_period) + 1, 5):
-            ax.axhline(tv, color=color, lw=0.5, alpha=alpha, zorder=5)
-        # also minor: every 1 s horizontal (lighter)
+            ax.axhline(tv, color=color, lw=0.6, alpha=alpha, zorder=5)
         for tv in range(0, int(cycle_period) + 1, 1):
             if tv % 5 != 0:
                 ax.axhline(tv, color=color, lw=0.25, alpha=alpha * 0.5, zorder=5)
-        # set ticks to match grid
-        ax.set_xticks(np.arange(int(np.floor(e_lo)), int(np.ceil(e_hi)) + 1, 1))
+        # ticks with binding energy labels
+        ax.set_xticks(e_ticks)
+        ax.set_xticklabels([f"{ev:.0f}" for ev in e_ticks], fontsize=8)
         ax.set_yticks(np.arange(0, cycle_period + 1, 5))
+        ax.tick_params(axis="x", labelsize=8)
 
     # ========== PLOT 1: channel amplitudes ==========
     fig, ax = plt.subplots(figsize=(12, 5))

@@ -35,9 +35,11 @@ TIME_BIN_S = float(sys.argv[5]) if len(sys.argv) > 5 else 1.0
 E_GRID_STEP = 0.1
 E_WINDOW = 0.3  # eV, total width of each energy window
 
-# Energy centers to cut (eV) - spanning the O 1s range 528-537.5 eV
+# Energy centers to cut (eV) - default spans O 1s range; override via CLI arg 6
 E_CENTERS = [529.0, 529.5, 530.0, 530.5, 531.0, 531.5, 532.0, 532.5,
              533.0, 533.5, 534.0, 534.5, 535.0, 535.5, 536.0, 536.5, 537.0]
+if len(sys.argv) > 6:
+    E_CENTERS = [float(x) for x in sys.argv[6].split(",")]
 
 
 def save_fig(fig, out_file):
@@ -215,12 +217,15 @@ def main():
     ax.set_ylabel(f"Time within cycle (s)")
     ax.set_title(f"{region_name} time heatmap with time-cut energies marked (cyan)")
     # visible grid: vertical at each 1 eV, horizontal at each 5 s
-    for ev in range(int(np.floor(e_grid[-1])), int(np.ceil(e_grid[0])) + 1):
+    e_ticks = np.arange(int(np.floor(e_grid[-1])), int(np.ceil(e_grid[0])) + 1, 1)
+    for ev in e_ticks:
         ax.axvline(ev, color="white", lw=0.5, alpha=0.35, zorder=5)
     for tv in range(0, int(CYCLE_PERIOD_S) + 1, 5):
-        ax.axhline(tv, color="white", lw=0.5, alpha=0.35, zorder=5)
-    ax.set_xticks(np.arange(int(np.floor(e_grid[-1])), int(np.ceil(e_grid[0])) + 1, 1))
+        ax.axhline(tv, color="white", lw=0.6, alpha=0.35, zorder=5)
+    ax.set_xticks(e_ticks)
+    ax.set_xticklabels([f"{ev:.0f}" for ev in e_ticks], fontsize=8)
     ax.set_yticks(np.arange(0, CYCLE_PERIOD_S + 1, 5))
+    ax.tick_params(axis="x", labelsize=8)
     fig.colorbar(mesh, ax=ax, label="counts/s")
     fig.tight_layout()
     save_fig(fig, OUT_PREFIX + "_time_heatmap_with_cuts.png")
