@@ -4,8 +4,9 @@ energy windows (0.3 eV wide), plot counts/s vs folded potential (up/down sweep).
 
 Uses the same Au energy correction and channel cutting as CVXPS-apply-correction-ir.py.
 
-Usage: python CVXPS-voltage-cuts.py [correlated_csv] [au_corr_csv] [out_prefix] [v_lo] [v_hi] [e_min] [e_max]
+Usage: python CVXPS-voltage-cuts.py [correlated_csv] [au_corr_csv] [out_prefix] [v_lo] [v_hi] [e_window] [e_min] [e_max]
   v_lo, v_hi: voltage range for folding (default 0.6, 2.2)
+  e_window: energy window width in eV (default 0.3)
   e_min, e_max: energy range for cuts (default auto-detected from data)
 """
 
@@ -34,9 +35,9 @@ V_LO = float(sys.argv[4]) if len(sys.argv) > 4 else 0.6
 V_HI = float(sys.argv[5]) if len(sys.argv) > 5 else 2.2
 DV_THRESHOLD = 1e-3
 E_GRID_STEP = 0.1
-E_WINDOW = 0.3  # eV, total width of each energy window
-E_MIN = float(sys.argv[6]) if len(sys.argv) > 6 else None
-E_MAX = float(sys.argv[7]) if len(sys.argv) > 7 else None
+E_WINDOW = float(sys.argv[6]) if len(sys.argv) > 6 else 0.3  # eV, total width of each energy window
+E_MIN = float(sys.argv[7]) if len(sys.argv) > 7 else None
+E_MAX = float(sys.argv[8]) if len(sys.argv) > 8 else None
 
 # energy centers to cut (eV) - will be auto-generated from E_MIN to E_MAX if not specified
 
