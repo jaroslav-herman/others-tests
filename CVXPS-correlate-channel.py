@@ -45,6 +45,10 @@ OUT_FILE = (sys.argv[3] if len(sys.argv) > 3 else os.path.join(
 # Local = UTC + UTC_OFFSET_HOURS (here CET, 1 hour ahead of UTC).
 UTC_OFFSET_HOURS = 1.0
 
+# Optional time offset in seconds between EC and XPS computers (default 0)
+# Positive value means EC computer is ahead of XPS computer
+TIME_OFFSET_SECONDS = float(sys.argv[6]) if len(sys.argv) > 6 else 0.0
+
 # Channel-split .xy files carry "# Cycle: ..., Scan: N, Channel: C"; keep only
 # scans whose channel lies in [CH_MIN, CH_MAX].
 CH_MIN = int(sys.argv[4]) if len(sys.argv) > 4 else 50
@@ -111,8 +115,10 @@ def parse_mpt(filename):
             })
     if start_local is None:
         raise ValueError("no 'Acquisition started on' line found in .mpt")
-    # local start -> UTC, then add elapsed time/s
-    start_utc = (start_local - timedelta(hours=UTC_OFFSET_HOURS)).replace(tzinfo=UTC)
+    # local start -> UTC, then add elapsed time/s, then apply computer time offset
+    start_utc = (start_local - timedelta(hours=UTC_OFFSET_HOURS) + timedelta(seconds=TIME_OFFSET_SECONDS)).replace(tzinfo=UTC)
+    if TIME_OFFSET_SECONDS != 0:
+        print(f"Applied time offset: {TIME_OFFSET_SECONDS} seconds (EC {'ahead' if TIME_OFFSET_SECONDS > 0 else 'behind'} XPS)")
     start_epoch = start_utc.timestamp()
     for r in rows:
         r["abs_epoch"] = start_epoch + r["time_s"]
