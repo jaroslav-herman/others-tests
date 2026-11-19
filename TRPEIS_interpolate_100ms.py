@@ -10,7 +10,7 @@ plt.rcParams['text.usetex'] = False
 plt.rcParams['font.family'] = 'sans-serif'
 
 # Input file path
-input_file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\518_VII_Pt+200_nm_cathode\TR-PEIS\trpeis_at_1,46V_for_30s_and_60s_OCV_PEIS.txt"
+input_file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\518_VII_Pt+200_nm_cathode\TR-PEIS\trpeis_at_1,46V_for_20s_and_70s_OCV_PEIS.txt"
 
 # Output directory (local)
 output_dir = r"C:\Users\Herman\Python\others-tests\TRPEIS_output"
