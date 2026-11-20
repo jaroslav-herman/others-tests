@@ -10,7 +10,7 @@ plt.rcParams['text.usetex'] = False
 plt.rcParams['font.family'] = 'sans-serif'
 
 # Input file path
-input_file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\518_VII_Pt+200_nm_cathode\TR-PEIS\trpeis_at_1,46V_for_20s_and_70s_OCV_PEIS.txt"
+input_file = r"\\ELECTROLYZER\PEM-WE_measurements\2026\518_VII_Pt+200_nm_cathode\TR-PEIS\trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS.txt"
 
 # Output directory (local)
 output_dir = r"C:\Users\Herman\Python\others-tests\TRPEIS_output"
@@ -30,11 +30,15 @@ print(f"Columns: {list(data.columns)}")
 # Get unique frequencies and times
 unique_freqs = np.sort(data['freq/Hz'].unique())
 unique_times = np.sort(data['time/s'].unique())
+unique_loops = np.sort(data['Loop'].unique())
+unique_techs = np.sort(data['Tech'].unique())
 
 print(f"\nUnique frequencies: {len(unique_freqs)} frequencies")
 print(f"Frequency range: {unique_freqs.min():.2f} - {unique_freqs.max():.2f} Hz")
 print(f"\nUnique times: {len(unique_times)} time points")
 print(f"Time range: {unique_times.min():.2f} - {unique_times.max():.2f} s")
+print(f"\nUnique Loops: {len(unique_loops)} loops (cycles)")
+print(f"Unique Techs: {len(unique_techs)} techs")
 
 # The TR-PEIS procedure:
 # Time-resolved EIS measures impedance at multiple frequencies at different times
@@ -177,7 +181,6 @@ plt.close()
 print("\nPlotting voltage and current time evolution for individual frequency cycles...")
 
 # For each frequency, plot Ewe and I vs time
-# Group the original data by frequency and plot the raw time evolution
 for freq in unique_freqs:
     freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
     
@@ -253,6 +256,56 @@ print(f"Saving combined voltage/current plot to: {output_combined_plot}")
 plt.savefig(output_combined_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
+# NEW: Plot current vs. time for all cycles with rainbow gradient
+print("\nCreating current vs. time plot for all cycles with rainbow gradient...")
+
+# Get all unique loops (cycles) from the original data
+# Group by Loop to get each cycle's data
+cmap = plt.get_cmap('rainbow')
+norm = plt.Normalize(vmin=unique_loops.min(), vmax=unique_loops.max())
+
+plt.figure(figsize=(14, 8))
+
+# Plot each cycle's current vs time with rainbow colors
+for loop in unique_loops:
+    loop_data = data[data['Loop'] == loop].sort_values('time/s')
+    
+    if len(loop_data) < 2:
+        continue
+    
+    # Get the color for this loop based on its position in the sequence
+    color = cmap(norm(loop))
+    label = f'Loop {loop}'
+    
+    plt.plot(loop_data['time/s'], loop_data['I/mA'], '-', 
+             color=color, linewidth=1.5, label=label, alpha=0.7)
+
+plt.xlabel('Time / s', fontsize=12)
+plt.ylabel('Current / mA', fontsize=12)
+plt.title('Current vs. Time Evolution for All Cycles (Rainbow Gradient)', fontsize=14)
+plt.grid(True, alpha=0.3)
+plt.tick_params(axis='both', which='major', labelsize=10)
+
+# Add colorbar to show the mapping from color to loop number
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+plt.colorbar(sm, ax=plt.gca(), label='Loop Number', shrink=0.5)
+
+# Only show legend for first, middle, and last to avoid clutter
+# We'll manually add a few representative labels
+handles, labels = plt.gca().get_legend_handles_labels()
+if len(labels) > 20:
+    # Show only first, some middle, and last
+    indices = [0, len(labels)//4, len(labels)//2, 3*len(labels)//4, -1]
+    handles = [handles[i] for i in indices]
+    labels = [labels[i] for i in indices]
+plt.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+
+output_cycles_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_all_cycles_current_vs_time.png'))
+print(f"Saving all cycles current vs time plot to: {output_cycles_plot}")
+plt.savefig(output_cycles_plot, dpi=300, bbox_inches='tight')
+plt.close()
+
 # Create a summary text file with processing information
 print("\nCreating summary file...")
 summary_content = f"""TR-PEIS Data Processing Summary
@@ -266,6 +319,8 @@ Data Statistics:
 - Frequency range: {unique_freqs.min():.2f} - {unique_freqs.max():.2f} Hz
 - Number of unique frequencies: {len(unique_freqs)}
 - Number of unique times: {len(unique_times)}
+- Number of unique loops (cycles): {len(unique_loops)}
+- Number of unique techs: {len(unique_techs)}
 
 Interpolation:
 - Time grid spacing: 100 ms (0.1 s)
@@ -288,6 +343,9 @@ Output Files:
 4. Combined voltage/current plot: {os.path.basename(output_combined_plot)}
    - Shows voltage and current evolution for all frequencies together
 
+5. All cycles current vs time plot: {os.path.basename(output_cycles_plot)}
+   - Shows current vs time for all cycles with rainbow gradient coloring
+
 Processing completed successfully.
 """
 
@@ -302,6 +360,7 @@ print(f"Interpolated data saved to: {output_csv}")
 print(f"Nyquist plot saved to: {output_plot}")
 print(f"Individual frequency plots saved to: {output_dir}")
 print(f"Combined voltage/current plot saved to: {output_combined_plot}")
+print(f"All cycles current vs time plot saved to: {output_cycles_plot}")
 print(f"Summary saved to: {summary_file}")
 
 # List all output files
