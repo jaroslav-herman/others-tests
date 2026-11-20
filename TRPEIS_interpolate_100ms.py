@@ -177,8 +177,8 @@ print(f"Saving Nyquist plot to: {output_plot}")
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
-# NEW: Plot current vs. frequency for specific time points (45, 50, 55, 59 s)
-print("\nPlotting current vs. frequency for specific time points...")
+# Plot current vs. frequency cycle number for specific time points
+print("\nPlotting current vs. frequency cycle number for specific time points...")
 
 # Specific time points requested by user
 specific_times = [45.0, 50.0, 55.0, 59.0]
@@ -192,25 +192,41 @@ plt.figure(figsize=(14, 8))
 for i, t in enumerate(specific_times):
     # Find data at this specific time point (or closest)
     time_mask = np.abs(df_interp['time/s'] - t) < 0.05  # 50 ms window
-    time_data = df_interp[time_mask].sort_values('freq/Hz')
+    time_data = df_interp[time_mask]
     
     if len(time_data) == 0:
         print(f"Warning: No data found for time {t} s")
         continue
     
+    # We need to get the Loop number for each frequency at this time
+    # Since df_interp doesn't have Loop, we need to get it from the original data
+    # For each frequency, find the Loop at the closest time to t
+    
+    # Get all frequencies at this time
+    freqs_at_t = time_data['freq/Hz'].values
+    currents_at_t = time_data['I/mA'].values
+    
+    # For each frequency, find the Loop number from original data at closest time
+    loops_at_t = []
+    for freq in freqs_at_t:
+        freq_data = data[data['freq/Hz'] == freq]
+        # Find the closest time to t
+        time_diff = np.abs(freq_data['time/s'] - t)
+        closest_idx = np.argmin(time_diff)
+        loops_at_t.append(freq_data.iloc[closest_idx]['Loop'])
+    
     # Get color based on time value
     color = cmap(norm(t))
     label = f't={t:.0f} s'
     
-    # Plot current vs frequency for this time point
-    plt.plot(time_data['freq/Hz'], time_data['I/mA'], '-o', 
+    # Plot current vs loop number for this time point
+    plt.plot(loops_at_t, currents_at_t, '-o', 
              color=color, linewidth=2, markersize=6, label=label, markerfacecolor='none', markeredgewidth=1.5)
 
-plt.xlabel('Frequency / Hz', fontsize=12)
+plt.xlabel('Frequency Cycle Number (Loop)', fontsize=12)
 plt.ylabel('Current / mA', fontsize=12)
-plt.xscale('log')  # Use log scale for frequency axis
-plt.title('Current vs. Frequency for Specific Time Points (45, 50, 55, 59 s)', fontsize=14)
-plt.grid(True, alpha=0.3, which='both')
+plt.title('Current vs. Frequency Cycle Number for Specific Time Points (45, 50, 55, 59 s)', fontsize=14)
+plt.grid(True, alpha=0.3)
 plt.legend(fontsize=12)
 plt.tick_params(axis='both', which='major', labelsize=10)
 
@@ -219,9 +235,100 @@ sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])
 plt.colorbar(sm, ax=plt.gca(), label='Time / s', shrink=0.8)
 
-output_current_freq_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_current_vs_frequency_specific_times.png'))
-print(f"Saving current vs frequency plot to: {output_current_freq_plot}")
-plt.savefig(output_current_freq_plot, dpi=300, bbox_inches='tight')
+output_current_loop_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_current_vs_loop_specific_times.png'))
+print(f"Saving current vs loop plot to: {output_current_loop_plot}")
+plt.savefig(output_current_loop_plot, dpi=300, bbox_inches='tight')
+plt.close()
+
+# KEEP: Plot current vs. time for all frequencies with rainbow gradient based on frequency order
+print("\nPlotting current vs. time for all frequencies with rainbow gradient based on frequency order...")
+
+# Get frequencies in the order they appear in the file
+freq_order = []
+seen_freqs = set()
+for _, row in data.iterrows():
+    freq = row['freq/Hz']
+    if freq not in seen_freqs:
+        seen_freqs.add(freq)
+        freq_order.append(freq)
+
+print(f"Found {len(freq_order)} unique frequencies in file order")
+
+# Create color map based on frequency order
+cmap = plt.get_cmap('rainbow')
+norm_freq = plt.Normalize(vmin=0, vmax=len(freq_order))
+
+plt.figure(figsize=(14, 8))
+
+# Plot each frequency's current vs time with color based on its order in the file
+for i, freq in enumerate(freq_order):
+    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
+    
+    if len(freq_data) < 2:
+        continue
+    
+    # Get the color for this frequency based on its order
+    color = cmap(norm_freq(i))
+    label = f'{freq:.2f} Hz'
+    
+    plt.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
+             color=color, linewidth=1.5, label=label, alpha=0.7)
+
+plt.xlabel('Time / s', fontsize=12)
+plt.ylabel('Current / mA', fontsize=12)
+plt.title('Current vs. Time for All Frequency Cycles (Colored by Frequency Order)', fontsize=14)
+plt.grid(True, alpha=0.3)
+plt.tick_params(axis='both', which='major', labelsize=10)
+
+# Add colorbar to show the mapping from color to frequency order
+sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm_freq)
+sm.set_array([])
+plt.colorbar(sm, ax=plt.gca(), label='Frequency Order Index', shrink=0.5)
+
+# Only show legend for first, middle, and last to avoid clutter
+handles, labels = plt.gca().get_legend_handles_labels()
+if len(labels) > 20:
+    # Show only first, some middle, and last
+    indices = [0, len(labels)//4, len(labels)//2, 3*len(labels)//4, -1]
+    handles = [handles[i] for i in indices]
+    labels = [labels[i] for i in indices]
+plt.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+
+output_all_freq_current_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_all_frequencies_current_vs_time_ordered.png'))
+print(f"Saving all frequencies current vs time plot (ordered) to: {output_all_freq_current_plot}")
+plt.savefig(output_all_freq_current_plot, dpi=300, bbox_inches='tight')
+plt.close()
+
+# KEEP: Combined current plot with all frequencies for comparison
+print("\nCreating combined current evolution plots...")
+
+fig, ax1 = plt.subplots(1, 1, figsize=(14, 8))
+colors = we.get_colors(len(unique_freqs))
+
+for i, freq in enumerate(unique_freqs):
+    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
+    
+    if len(freq_data) < 2:
+        continue
+    
+    label = f'{freq:.2f} Hz'
+    
+    # Plot current for this frequency
+    ax1.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
+             color=colors[i], linewidth=1.5, label=label, alpha=0.7)
+
+ax1.set_ylabel('I / mA', fontsize=12)
+ax1.set_xlabel('Time / s', fontsize=12)
+ax1.grid(True, alpha=0.3)
+ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
+ax1.tick_params(axis='both', which='major', labelsize=10)
+ax1.set_title('Current Evolution for All Frequencies', fontsize=14)
+
+plt.tight_layout()
+
+output_combined_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_combined_current.png'))
+print(f"Saving combined current plot to: {output_combined_plot}")
+plt.savefig(output_combined_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
 # Create a summary text file with processing information
@@ -255,9 +362,16 @@ Output Files:
 2. Nyquist plot: {output_plot_base}
    - Shows impedance spectra at selected time points
 
-3. Current vs frequency plot: {os.path.basename(output_current_freq_plot)}
-   - Shows current evolution as a function of frequency for time points: {specific_times}
+3. Current vs loop number plot: {os.path.basename(output_current_loop_plot)}
+   - Shows current vs frequency cycle number (Loop) for time points: {specific_times}
    - Rainbow gradient colors based on time (45s, 50s, 55s, 59s)
+
+4. All frequencies current vs time (ordered): {os.path.basename(output_all_freq_current_plot)}
+   - Shows current vs time for all frequencies with rainbow gradient
+   - Colors based on frequency order in the file
+
+5. Combined current plot: {os.path.basename(output_combined_plot)}
+   - Shows current evolution for all frequencies together
 
 Processing completed successfully.
 """
@@ -271,7 +385,9 @@ print(f"Summary saved to: {summary_file}")
 print("\nProcessing complete!")
 print(f"Interpolated data saved to: {output_csv}")
 print(f"Nyquist plot saved to: {output_plot}")
-print(f"Current vs frequency plot saved to: {output_current_freq_plot}")
+print(f"Current vs loop plot saved to: {output_current_loop_plot}")
+print(f"All frequencies current vs time plot saved to: {output_all_freq_current_plot}")
+print(f"Combined current plot saved to: {output_combined_plot}")
 print(f"Summary saved to: {summary_file}")
 
 # List all output files

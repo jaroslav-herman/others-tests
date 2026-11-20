@@ -27,8 +27,15 @@ Output Files:
 2. Nyquist plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_nyquist_interpolated.png
    - Shows impedance spectra at selected time points
 
-3. Current vs frequency plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_current_vs_frequency_specific_times.png
-   - Shows current evolution as a function of frequency for time points: [45.0, 50.0, 55.0, 59.0]
+3. Current vs loop number plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_current_vs_loop_specific_times.png
+   - Shows current vs frequency cycle number (Loop) for time points: [45.0, 50.0, 55.0, 59.0]
    - Rainbow gradient colors based on time (45s, 50s, 55s, 59s)
+
+4. All frequencies current vs time (ordered): trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_all_frequencies_current_vs_time_ordered.png
+   - Shows current vs time for all frequencies with rainbow gradient
+   - Colors based on frequency order in the file
+
+5. Combined current plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_combined_current.png
+   - Shows current evolution for all frequencies together
 
 Processing completed successfully.
