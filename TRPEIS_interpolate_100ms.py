@@ -177,143 +177,51 @@ print(f"Saving Nyquist plot to: {output_plot}")
 plt.savefig(output_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
-# Plot voltage and current time evolution for individual frequency cycles
-print("\nPlotting voltage and current time evolution for individual frequency cycles...")
+# NEW: Plot current vs. frequency for specific time points (45, 50, 55, 59 s)
+print("\nPlotting current vs. frequency for specific time points...")
 
-# For each frequency, plot Ewe and I vs time
-for freq in unique_freqs:
-    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
-    
-    if len(freq_data) < 2:
-        continue
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    
-    # Plot voltage
-    ax1.plot(freq_data['time/s'], freq_data['Ewe/V'], 'b-', linewidth=1.5, label=f'Ewe at {freq:.2f} Hz')
-    ax1.set_ylabel('Ewe / V', fontsize=12)
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(fontsize=10)
-    ax1.tick_params(axis='both', which='major', labelsize=10)
-    ax1.set_title(f'Voltage and Current Evolution at {freq:.2f} Hz', fontsize=14)
-    
-    # Plot current
-    ax2.plot(freq_data['time/s'], freq_data['I/mA'], 'r-', linewidth=1.5, label=f'I at {freq:.2f} Hz')
-    ax2.set_ylabel('I / mA', fontsize=12)
-    ax2.set_xlabel('Time / s', fontsize=12)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=10)
-    ax2.tick_params(axis='both', which='major', labelsize=10)
-    
-    plt.tight_layout()
-    
-    # Save each frequency's plot
-    freq_label = f"{freq:.2f}".replace('.', '_')
-    output_freq_plot = os.path.join(output_dir, f"freq_{freq_label}_Hz_voltage_current.png")
-    print(f"Saving voltage/current plot for {freq:.2f} Hz to: {output_freq_plot}")
-    plt.savefig(output_freq_plot, dpi=300, bbox_inches='tight')
-    plt.close()
+# Specific time points requested by user
+specific_times = [45.0, 50.0, 55.0, 59.0]
 
-# Also create a combined plot with all frequencies for comparison
-print("\nCreating combined voltage and current evolution plots...")
-
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
-colors = we.get_colors(len(unique_freqs))
-
-for i, freq in enumerate(unique_freqs):
-    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
-    
-    if len(freq_data) < 2:
-        continue
-    
-    label = f'{freq:.2f} Hz'
-    
-    # Plot voltage for this frequency
-    ax1.plot(freq_data['time/s'], freq_data['Ewe/V'], '-', 
-             color=colors[i], linewidth=1.5, label=label)
-    
-    # Plot current for this frequency
-    ax2.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
-             color=colors[i], linewidth=1.5, label=label)
-
-ax1.set_ylabel('Ewe / V', fontsize=12)
-ax1.grid(True, alpha=0.3)
-ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
-ax1.tick_params(axis='both', which='major', labelsize=10)
-ax1.set_title('Voltage Evolution for All Frequencies', fontsize=14)
-
-ax2.set_ylabel('I / mA', fontsize=12)
-ax2.set_xlabel('Time / s', fontsize=12)
-ax2.grid(True, alpha=0.3)
-ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
-ax2.tick_params(axis='both', which='major', labelsize=10)
-ax2.set_title('Current Evolution for All Frequencies', fontsize=14)
-
-plt.tight_layout()
-
-output_combined_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_combined_voltage_current.png'))
-print(f"Saving combined voltage/current plot to: {output_combined_plot}")
-plt.savefig(output_combined_plot, dpi=300, bbox_inches='tight')
-plt.close()
-
-# NEW: Plot current vs. time for all frequency cycles with colors based on frequency order
-print("\nCreating current vs. time plot for all frequency cycles with colors based on frequency order...")
-
-# Get frequencies in the order they appear in the file
-freq_order = []
-seen_freqs = set()
-for _, row in data.iterrows():
-    freq = row['freq/Hz']
-    if freq not in seen_freqs:
-        seen_freqs.add(freq)
-        freq_order.append(freq)
-
-print(f"Found {len(freq_order)} unique frequencies in file order")
-
-# Create color map based on frequency order
+# Create color map for these specific times (rainbow gradient)
 cmap = plt.get_cmap('rainbow')
-norm = plt.Normalize(vmin=0, vmax=len(freq_order))
+norm = plt.Normalize(vmin=min(specific_times), vmax=max(specific_times))
 
 plt.figure(figsize=(14, 8))
 
-# Plot each frequency's current vs time with color based on its order in the file
-for i, freq in enumerate(freq_order):
-    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
+for i, t in enumerate(specific_times):
+    # Find data at this specific time point (or closest)
+    time_mask = np.abs(df_interp['time/s'] - t) < 0.05  # 50 ms window
+    time_data = df_interp[time_mask].sort_values('freq/Hz')
     
-    if len(freq_data) < 2:
+    if len(time_data) == 0:
+        print(f"Warning: No data found for time {t} s")
         continue
     
-    # Get the color for this frequency based on its order
-    color = cmap(norm(i))
-    label = f'{freq:.2f} Hz'
+    # Get color based on time value
+    color = cmap(norm(t))
+    label = f't={t:.0f} s'
     
-    plt.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
-             color=color, linewidth=1.5, label=label, alpha=0.7)
+    # Plot current vs frequency for this time point
+    plt.plot(time_data['freq/Hz'], time_data['I/mA'], '-o', 
+             color=color, linewidth=2, markersize=6, label=label, markerfacecolor='none', markeredgewidth=1.5)
 
-plt.xlabel('Time / s', fontsize=12)
+plt.xlabel('Frequency / Hz', fontsize=12)
 plt.ylabel('Current / mA', fontsize=12)
-plt.title('Current vs. Time for All Frequency Cycles (Colored by Frequency Order)', fontsize=14)
-plt.grid(True, alpha=0.3)
+plt.xscale('log')  # Use log scale for frequency axis
+plt.title('Current vs. Frequency for Specific Time Points (45, 50, 55, 59 s)', fontsize=14)
+plt.grid(True, alpha=0.3, which='both')
+plt.legend(fontsize=12)
 plt.tick_params(axis='both', which='major', labelsize=10)
 
-# Add colorbar to show the mapping from color to frequency order
+# Add colorbar to show time mapping
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])
-cbar = plt.colorbar(sm, ax=plt.gca(), label='Frequency Order Index', shrink=0.5)
+plt.colorbar(sm, ax=plt.gca(), label='Time / s', shrink=0.8)
 
-# Only show legend for first, middle, and last to avoid clutter
-# Get all handles and labels
-handles, labels = plt.gca().get_legend_handles_labels()
-if len(labels) > 20:
-    # Show only first, some middle, and last
-    indices = [0, len(labels)//4, len(labels)//2, 3*len(labels)//4, -1]
-    handles = [handles[i] for i in indices]
-    labels = [labels[i] for i in indices]
-plt.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
-
-output_cycles_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_all_frequencies_current_vs_time_ordered.png'))
-print(f"Saving all frequencies current vs time plot (ordered) to: {output_cycles_plot}")
-plt.savefig(output_cycles_plot, dpi=300, bbox_inches='tight')
+output_current_freq_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_current_vs_frequency_specific_times.png'))
+print(f"Saving current vs frequency plot to: {output_current_freq_plot}")
+plt.savefig(output_current_freq_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
 # Create a summary text file with processing information
@@ -347,15 +255,9 @@ Output Files:
 2. Nyquist plot: {output_plot_base}
    - Shows impedance spectra at selected time points
 
-3. Individual frequency voltage/current plots:
-   - {len(unique_freqs)} plots showing Ewe and I vs time for each frequency
-
-4. Combined voltage/current plot: {os.path.basename(output_combined_plot)}
-   - Shows voltage and current evolution for all frequencies together
-
-5. All frequencies current vs time plot (ordered): {os.path.basename(output_cycles_plot)}
-   - Shows current vs time for all frequency cycles with rainbow gradient
-   - Colors based on frequency order in the file (first frequency = first color, last = last color)
+3. Current vs frequency plot: {os.path.basename(output_current_freq_plot)}
+   - Shows current evolution as a function of frequency for time points: {specific_times}
+   - Rainbow gradient colors based on time (45s, 50s, 55s, 59s)
 
 Processing completed successfully.
 """
@@ -369,9 +271,7 @@ print(f"Summary saved to: {summary_file}")
 print("\nProcessing complete!")
 print(f"Interpolated data saved to: {output_csv}")
 print(f"Nyquist plot saved to: {output_plot}")
-print(f"Individual frequency plots saved to: {output_dir}")
-print(f"Combined voltage/current plot saved to: {output_combined_plot}")
-print(f"All frequencies current vs time plot (ordered) saved to: {output_cycles_plot}")
+print(f"Current vs frequency plot saved to: {output_current_freq_plot}")
 print(f"Summary saved to: {summary_file}")
 
 # List all output files
