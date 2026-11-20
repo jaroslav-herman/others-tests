@@ -33,7 +33,8 @@ Output Files:
 4. Combined voltage/current plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_combined_voltage_current.png
    - Shows voltage and current evolution for all frequencies together
 
-5. All cycles current vs time plot: trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_all_cycles_current_vs_time.png
-   - Shows current vs time for all cycles with rainbow gradient coloring
+5. All frequencies current vs time plot (ordered): trpeis_at_1,46V_for_20s_and_40s_OCV_PEIS_all_frequencies_current_vs_time_ordered.png
+   - Shows current vs time for all frequency cycles with rainbow gradient
+   - Colors based on frequency order in the file (first frequency = first color, last = last color)
 
 Processing completed successfully.

@@ -256,43 +256,53 @@ print(f"Saving combined voltage/current plot to: {output_combined_plot}")
 plt.savefig(output_combined_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
-# NEW: Plot current vs. time for all cycles with rainbow gradient
-print("\nCreating current vs. time plot for all cycles with rainbow gradient...")
+# NEW: Plot current vs. time for all frequency cycles with colors based on frequency order
+print("\nCreating current vs. time plot for all frequency cycles with colors based on frequency order...")
 
-# Get all unique loops (cycles) from the original data
-# Group by Loop to get each cycle's data
+# Get frequencies in the order they appear in the file
+freq_order = []
+seen_freqs = set()
+for _, row in data.iterrows():
+    freq = row['freq/Hz']
+    if freq not in seen_freqs:
+        seen_freqs.add(freq)
+        freq_order.append(freq)
+
+print(f"Found {len(freq_order)} unique frequencies in file order")
+
+# Create color map based on frequency order
 cmap = plt.get_cmap('rainbow')
-norm = plt.Normalize(vmin=unique_loops.min(), vmax=unique_loops.max())
+norm = plt.Normalize(vmin=0, vmax=len(freq_order))
 
 plt.figure(figsize=(14, 8))
 
-# Plot each cycle's current vs time with rainbow colors
-for loop in unique_loops:
-    loop_data = data[data['Loop'] == loop].sort_values('time/s')
+# Plot each frequency's current vs time with color based on its order in the file
+for i, freq in enumerate(freq_order):
+    freq_data = data[data['freq/Hz'] == freq].sort_values('time/s')
     
-    if len(loop_data) < 2:
+    if len(freq_data) < 2:
         continue
     
-    # Get the color for this loop based on its position in the sequence
-    color = cmap(norm(loop))
-    label = f'Loop {loop}'
+    # Get the color for this frequency based on its order
+    color = cmap(norm(i))
+    label = f'{freq:.2f} Hz'
     
-    plt.plot(loop_data['time/s'], loop_data['I/mA'], '-', 
+    plt.plot(freq_data['time/s'], freq_data['I/mA'], '-', 
              color=color, linewidth=1.5, label=label, alpha=0.7)
 
 plt.xlabel('Time / s', fontsize=12)
 plt.ylabel('Current / mA', fontsize=12)
-plt.title('Current vs. Time Evolution for All Cycles (Rainbow Gradient)', fontsize=14)
+plt.title('Current vs. Time for All Frequency Cycles (Colored by Frequency Order)', fontsize=14)
 plt.grid(True, alpha=0.3)
 plt.tick_params(axis='both', which='major', labelsize=10)
 
-# Add colorbar to show the mapping from color to loop number
+# Add colorbar to show the mapping from color to frequency order
 sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])
-plt.colorbar(sm, ax=plt.gca(), label='Loop Number', shrink=0.5)
+cbar = plt.colorbar(sm, ax=plt.gca(), label='Frequency Order Index', shrink=0.5)
 
 # Only show legend for first, middle, and last to avoid clutter
-# We'll manually add a few representative labels
+# Get all handles and labels
 handles, labels = plt.gca().get_legend_handles_labels()
 if len(labels) > 20:
     # Show only first, some middle, and last
@@ -301,8 +311,8 @@ if len(labels) > 20:
     labels = [labels[i] for i in indices]
 plt.legend(handles=handles, labels=labels, bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
 
-output_cycles_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_all_cycles_current_vs_time.png'))
-print(f"Saving all cycles current vs time plot to: {output_cycles_plot}")
+output_cycles_plot = os.path.join(output_dir, os.path.basename(input_file).replace('.txt', '_all_frequencies_current_vs_time_ordered.png'))
+print(f"Saving all frequencies current vs time plot (ordered) to: {output_cycles_plot}")
 plt.savefig(output_cycles_plot, dpi=300, bbox_inches='tight')
 plt.close()
 
@@ -343,8 +353,9 @@ Output Files:
 4. Combined voltage/current plot: {os.path.basename(output_combined_plot)}
    - Shows voltage and current evolution for all frequencies together
 
-5. All cycles current vs time plot: {os.path.basename(output_cycles_plot)}
-   - Shows current vs time for all cycles with rainbow gradient coloring
+5. All frequencies current vs time plot (ordered): {os.path.basename(output_cycles_plot)}
+   - Shows current vs time for all frequency cycles with rainbow gradient
+   - Colors based on frequency order in the file (first frequency = first color, last = last color)
 
 Processing completed successfully.
 """
@@ -360,7 +371,7 @@ print(f"Interpolated data saved to: {output_csv}")
 print(f"Nyquist plot saved to: {output_plot}")
 print(f"Individual frequency plots saved to: {output_dir}")
 print(f"Combined voltage/current plot saved to: {output_combined_plot}")
-print(f"All cycles current vs time plot saved to: {output_cycles_plot}")
+print(f"All frequencies current vs time plot (ordered) saved to: {output_cycles_plot}")
 print(f"Summary saved to: {summary_file}")
 
 # List all output files
